@@ -201,7 +201,7 @@ export default function App() {
             />
 
             <TextField
-              label="Per GPU Batch Size"
+              label={runConfig.numGPUs > 1 ? "Per GPU Batch Size" : "Batch Size"}
               value={runConfig.batchSize > 0 ? runConfig.batchSize : ""}
               error={runConfig.batchSize === 0}
               onChange={(e) =>
