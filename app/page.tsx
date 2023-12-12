@@ -140,13 +140,52 @@ const modelConfigPresets: {
     label: "gpt2-xl",
     modelConfig: {
       precision: Precision.full,
-      outPrecision: Precision.full,
+      outPrecision: Precision.half,
       numParams: 1.5576112,
       hiddenSize: 1600,
       vocabSize: 50257,
       numAttentionHeads: 25,
       numKeyValueHeads: 25,
+      intermediateSize: 4 * 1600,
+    },
+  },
+  {
+    label: "gpt2-large",
+    modelConfig: {
+      precision: Precision.full,
+      outPrecision: Precision.half,
+      numParams: 0.77403008,
+      hiddenSize: 1280,
+      vocabSize: 50257,
+      numAttentionHeads: 20,
+      numKeyValueHeads: 20,
+      intermediateSize: 4 * 1280,
+    },
+  },
+  {
+    label: "gpt2-medium",
+    modelConfig: {
+      precision: Precision.full,
+      outPrecision: Precision.half,
+      numParams: 0.354823168,
+      hiddenSize: 1024,
+      vocabSize: 50257,
+      numAttentionHeads: 16,
+      numKeyValueHeads: 16,
       intermediateSize: 4 * 1024,
+    },
+  },
+  {
+    label: "gpt2",
+    modelConfig: {
+      precision: Precision.full,
+      outPrecision: Precision.half,
+      numParams: 0.124439808,
+      hiddenSize: 768,
+      vocabSize: 50257,
+      numAttentionHeads: 12,
+      numKeyValueHeads: 12,
+      intermediateSize: 4 * 768,
     },
   },
 ]
@@ -362,6 +401,7 @@ export default function App() {
                     onClick={() => setModelConfig({ ...modelConfig, outPrecision: Precision.full })}
                   />
                 </Stack>
+
                 <Typography variant="body2" color="textSecondary">
                   Precision of output tensor is not always matches precision of model weights, because tensor is being
                   casted to lower precision only if operation is considered safe. Layer Norm, for example, is not
@@ -407,6 +447,18 @@ export default function App() {
             />
 
             <TextField
+              label="Number of Attention Heads"
+              value={modelConfig.numAttentionHeads > 0 ? modelConfig.numAttentionHeads : ""}
+              error={modelConfig.numAttentionHeads === 0}
+              onChange={(e) =>
+                Number(e.target.value) >= 0
+                  ? setModelConfig({ ...modelConfig, numAttentionHeads: Number(e.target.value) })
+                  : modelConfig.numAttentionHeads
+              }
+              helperText={modelConfig.numAttentionHeads === 0 ? "Can't be empty!" : ""}
+            />
+
+            <TextField
               label="Number of Key Value Heads"
               value={modelConfig.numKeyValueHeads > 0 ? modelConfig.numKeyValueHeads : ""}
               error={modelConfig.numKeyValueHeads === 0}
@@ -419,6 +471,22 @@ export default function App() {
                 modelConfig.numKeyValueHeads === 0
                   ? "Can't be empty!"
                   : "Might be different from number of attention heads when using Grouped Query Attention"
+              }
+            />
+
+            <TextField
+              label="Intermediate Size"
+              value={modelConfig.intermediateSize > 0 ? modelConfig.intermediateSize : ""}
+              error={modelConfig.intermediateSize === 0}
+              onChange={(e) =>
+                Number(e.target.value) >= 0
+                  ? setModelConfig({ ...modelConfig, intermediateSize: Number(e.target.value) })
+                  : modelConfig.intermediateSize
+              }
+              helperText={
+                modelConfig.intermediateSize === 0
+                  ? "Can't be empty!"
+                  : "Expanding dimensionality within MLP block. Usully it is 4 * hidden size."
               }
             />
           </Stack>
@@ -448,23 +516,28 @@ export default function App() {
             <List dense={true}>
               <ListItem>
                 <ListItemText
-                  primary={`Total VRAM usage is ${getTotalUsage({ resultEstimation, unit: resultUnit })} ${resultUnit}`}
+                  primary={`Total VRAM usage is ${getTotalUsage({
+                    resultEstimation,
+                    unit: resultUnit,
+                  })} ${resultUnit} ${runConfig.numGPUs > 1 ? "per GPU" : ""}`}
                 />
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary={`Model parameters use ${resultEstimation.parameters} ${resultUnit} of VRAM`}
+                  primary={`Model parameters use ${resultEstimation.parameters} ${resultUnit} of VRAM ${
+                    runConfig.numGPUs > 1 ? "per GPU" : ""
+                  }`}
                   secondary={`Number of parameters (${
                     modelConfig.numParams
-                  } billion) * number of bytes per parameter (${
-                    modelConfig.precision == Precision.full ? 4 : 2
-                  } bytes in case of ${modelConfig.precision == Precision.full ? "full" : "half"} precision)`}
+                  } billion) * number of bytes per parameter (${modelConfig.precision == Precision.full ? 4 : 2})`}
                 />
               </ListItem>
               {resultEstimation.outputs && (
                 <ListItem>
                   <ListItemText
-                    primary={`Output tensor uses ${resultEstimation.outputs} ${resultUnit} of VRAM`}
+                    primary={`Output tensor uses ${resultEstimation.outputs} ${resultUnit} of VRAM ${
+                      runConfig.numGPUs > 1 ? "per GPU" : ""
+                    }`}
                     secondary={`Batch size (${runConfig.batchSize}) * sequence length (${
                       runConfig.sequenceLength
                     }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (${Math.max(
@@ -476,7 +549,9 @@ export default function App() {
               )}
               <ListItem>
                 <ListItemText
-                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM`}
+                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM ${
+                    runConfig.numGPUs > 1 ? "per GPU" : ""
+                  }`}
                   secondary={`Fixed value`}
                 />
               </ListItem>
