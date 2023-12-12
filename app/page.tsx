@@ -43,11 +43,11 @@ function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: Re
         <Legend />
         {resultEstimation.cudaKernels != null && <Bar dataKey="CUDA Kernels" stackId="a" fill="#8884d8" />}
         {resultEstimation.parameters != null && <Bar dataKey="Parameters" stackId="a" fill="#82ca9d" />}
-        {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
         {resultEstimation.activations != null && <Bar dataKey="Activations" stackId="a" fill="#ff8042" />}
         {resultEstimation.gradients != null && <Bar dataKey="Gradients" stackId="a" fill="#81d4fa" />}
         {resultEstimation.firstMoments != null && <Bar dataKey="firstMoments" stackId="a" fill="#f48fb1" />}
         {resultEstimation.secondMoments != null && <Bar dataKey="secondMoments" stackId="a" fill="#80cbc4" />}
+        {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
       </BarChart>
     </ResponsiveContainer>
   )
@@ -229,6 +229,9 @@ function estimateResult({
       precision,
     ),
   }
+  if (runConfig.isTraining) {
+    resultEsimation.gradients = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+  }
   return resultEsimation
 }
 
@@ -403,9 +406,8 @@ export default function App() {
                 </Stack>
 
                 <Typography variant="body2" color="textSecondary">
-                  Precision of output tensor is not always matches precision of model weights, because tensor is being
-                  casted to lower precision only if operation is considered safe. Layer Norm, for example, is not
-                  autocasted (Llama and Mistral fp32, gpt2-xl fp16).
+                  Usually, output type is the same as weights type, but Llama and Mistral models explicitly convert
+                  output to float32 with `.float()`
                 </Typography>
               </Stack>
             )}
@@ -524,6 +526,14 @@ export default function App() {
               </ListItem>
               <ListItem>
                 <ListItemText
+                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM ${
+                    runConfig.numGPUs > 1 ? "per GPU" : ""
+                  }`}
+                  secondary={`Fixed value`}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
                   primary={`Model parameters use ${resultEstimation.parameters} ${resultUnit} of VRAM ${
                     runConfig.numGPUs > 1 ? "per GPU" : ""
                   }`}
@@ -532,6 +542,17 @@ export default function App() {
                   } billion) * number of bytes per parameter (${modelConfig.precision == Precision.full ? 4 : 2})`}
                 />
               </ListItem>
+
+              {resultEstimation.gradients && (
+                <ListItem>
+                  <ListItemText
+                    primary={`Gradients use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
+                      runConfig.numGPUs > 1 ? "per GPU" : ""
+                    }`}
+                    secondary={`Gradient with the same precision for each parameter`}
+                  />
+                </ListItem>
+              )}
               {resultEstimation.outputs && (
                 <ListItem>
                   <ListItemText
@@ -547,14 +568,6 @@ export default function App() {
                   />
                 </ListItem>
               )}
-              <ListItem>
-                <ListItemText
-                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM ${
-                    runConfig.numGPUs > 1 ? "per GPU" : ""
-                  }`}
-                  secondary={`Fixed value`}
-                />
-              </ListItem>
             </List>
           </Stack>
         </Grid>
