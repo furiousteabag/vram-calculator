@@ -18,11 +18,12 @@ import React, { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: ResultEstimation; numGPUs: number }) {
-  const data = []
+  let data = []
 
   for (let i = 0; i < numGPUs; i++) {
     data.push({
-      name: `${i} GPU${i !== 1 ? "s" : ""}`,
+      // name: `${i} GPU${i !== 1 ? "s" : ""}`,
+      name: i,
       "CUDA Kernels": resultEstimation.cudaKernels,
       Parameters: resultEstimation.parameters.toFixed(3),
       Outputs: resultEstimation.outputs ?? 0,
@@ -32,6 +33,8 @@ function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: Re
       secondMoments: resultEstimation.secondMoments ?? 0,
     })
   }
+
+  data = data.reverse()
 
   return (
     <ResponsiveContainer width="100%" height={300}>
