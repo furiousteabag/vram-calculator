@@ -15,6 +15,43 @@ import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
 import React, { useState } from "react"
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+
+function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: ResultEstimation; numGPUs: number }) {
+  const data = []
+
+  for (let i = 0; i < numGPUs; i++) {
+    data.push({
+      name: `${i} GPU${i !== 1 ? "s" : ""}`,
+      "CUDA Kernels": resultEstimation.cudaKernels,
+      Parameters: resultEstimation.parameters.toFixed(3),
+      Outputs: resultEstimation.outputs ?? 0,
+      activations: resultEstimation.activations ?? 0,
+      gradients: resultEstimation.gradients ?? 0,
+      firstMoments: resultEstimation.firstMoments ?? 0,
+      secondMoments: resultEstimation.secondMoments ?? 0,
+    })
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart layout="vertical" data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis type="number" />
+        <YAxis dataKey="name" type="category" />
+        <Tooltip />
+        <Legend />
+        {resultEstimation.cudaKernels != null && <Bar dataKey="CUDA Kernels" stackId="a" fill="#8884d8" />}
+        {resultEstimation.parameters != null && <Bar dataKey="Parameters" stackId="a" fill="#82ca9d" />}
+        {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
+        {resultEstimation.activations != null && <Bar dataKey="activations" stackId="a" fill="#ff8042" />}
+        {resultEstimation.gradients != null && <Bar dataKey="gradients" stackId="a" fill="#81d4fa" />}
+        {resultEstimation.firstMoments != null && <Bar dataKey="firstMoments" stackId="a" fill="#f48fb1" />}
+        {resultEstimation.secondMoments != null && <Bar dataKey="secondMoments" stackId="a" fill="#80cbc4" />}
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
 
 enum Optimizer {
   Adam,
@@ -30,9 +67,10 @@ interface ModelConfig {
   precision: Precision
   numParams: number
   hiddenSize: number
+  vocabSize: number
   numAttentionHeads: number
   numKeyValueHeads: number
-  intermediateSize?: number
+  intermediateSize: number
 }
 
 interface RunConfig {
@@ -75,6 +113,7 @@ const modelConfigPresets: {
       precision: Precision.half,
       numParams: 6.738,
       hiddenSize: 4096,
+      vocabSize: 32000,
       numAttentionHeads: 32,
       numKeyValueHeads: 32,
       intermediateSize: 11008,
@@ -86,6 +125,7 @@ const modelConfigPresets: {
       precision: Precision.half,
       numParams: 6.738,
       hiddenSize: 4096,
+      vocabSize: 32000,
       numAttentionHeads: 32,
       numKeyValueHeads: 8,
       intermediateSize: 14336,
@@ -97,6 +137,7 @@ const modelConfigPresets: {
       precision: Precision.full,
       numParams: 1.555,
       hiddenSize: 1024,
+      vocabSize: 50257,
       numAttentionHeads: 25,
       numKeyValueHeads: 25,
       intermediateSize: 4 * 1024,
@@ -111,10 +152,14 @@ function estimateResult({
   modelConfig: ModelConfig
   runConfig: RunConfig
 }): ResultEstimation {
+  const bytesPerParam = modelConfig.precision == Precision.full ? 4 : 2
   const resultEsimation: ResultEstimation = {
-    cudaKernels: 350,
-    parameters: (modelConfig.numParams * 10 ** 9 * (modelConfig.precision == Precision.full ? 4 : 2)) / 2 ** 30,
+    cudaKernels: 0.341,
+    parameters: (bytesPerParam * modelConfig.numParams * 10 ** 9) / 2 ** 30,
+    outputs: (4 * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) / 2 ** 30,
   }
+  console.log(resultEsimation)
+  console.log(modelConfig.vocabSize)
   return resultEsimation
 }
 
@@ -292,6 +337,18 @@ export default function App() {
             />
 
             <TextField
+              label="Vocab Size"
+              value={modelConfig.vocabSize > 0 ? modelConfig.vocabSize : ""}
+              error={modelConfig.vocabSize === 0}
+              onChange={(e) =>
+                Number(e.target.value) >= 0
+                  ? setModelConfig({ ...modelConfig, vocabSize: Number(e.target.value) })
+                  : modelConfig.vocabSize
+              }
+              helperText={modelConfig.vocabSize === 0 ? "Can't be empty!" : ""}
+            />
+
+            <TextField
               label="Number of Key Value Heads"
               value={modelConfig.numKeyValueHeads > 0 ? modelConfig.numKeyValueHeads : ""}
               error={modelConfig.numKeyValueHeads === 0}
@@ -309,25 +366,29 @@ export default function App() {
           </Stack>
         </Grid>
         <Grid item alignItems="center" xs={12} sm={6}>
-          <Typography variant="h5" align="center" sx={{ fontWeight: "bold" }}>
-            Estimation Result
-          </Typography>
-          <List dense={true}>
-            <ListItem>
-              <ListItemText
-                primary={"Model parameters use " + resultEstimation.parameters.toFixed(3) + " GiB of VRAM"}
-                secondary={
-                  "Number of parameters (" +
-                  modelConfig.numParams +
-                  " billion) * number of bytes per parameter (" +
-                  (modelConfig.precision == Precision.full ? 4 : 2) +
-                  " bytes in case of " +
-                  (modelConfig.precision == Precision.full ? "full" : "half") +
-                  " precision)"
-                }
-              />
-            </ListItem>
-          </List>
+          <Stack spacing={2} justifyItems="center">
+            <Typography variant="h5" align="center" sx={{ fontWeight: "bold" }}>
+              Estimation Result
+            </Typography>
+
+            <MyStackedBarChart resultEstimation={resultEstimation} numGPUs={runConfig.numGPUs} />
+            <List dense={true}>
+              <ListItem>
+                <ListItemText
+                  primary={"Model parameters use " + resultEstimation.parameters.toFixed(3) + " GiB of VRAM"}
+                  secondary={
+                    "Number of parameters (" +
+                    modelConfig.numParams +
+                    " billion) * number of bytes per parameter (" +
+                    (modelConfig.precision == Precision.full ? 4 : 2) +
+                    " bytes in case of " +
+                    (modelConfig.precision == Precision.full ? "full" : "half") +
+                    " precision)"
+                  }
+                />
+              </ListItem>
+            </List>
+          </Stack>
         </Grid>
       </Grid>
     </Container>
