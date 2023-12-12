@@ -20,35 +20,32 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: ResultEstimation; numGPUs: number }) {
   let data = []
 
-  for (let i = 0; i < numGPUs; i++) {
+  for (let i = numGPUs - 1; i >= 0; i--) {
     data.push({
-      // name: `${i} GPU${i !== 1 ? "s" : ""}`,
       name: i,
       "CUDA Kernels": resultEstimation.cudaKernels,
-      Parameters: resultEstimation.parameters.toFixed(3),
+      Parameters: resultEstimation.parameters,
       Outputs: resultEstimation.outputs ?? 0,
-      activations: resultEstimation.activations ?? 0,
-      gradients: resultEstimation.gradients ?? 0,
+      Activations: resultEstimation.activations ?? 0,
+      Gradients: resultEstimation.gradients ?? 0,
       firstMoments: resultEstimation.firstMoments ?? 0,
       secondMoments: resultEstimation.secondMoments ?? 0,
     })
   }
 
-  data = data.reverse()
-
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={150 + 100 * Math.log2(numGPUs)}>
       <BarChart layout="vertical" data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" />
-        <YAxis dataKey="name" type="category" />
+        <YAxis dataKey="name" type="category" label={{ value: "GPU Index", angle: -90 }} />
         <Tooltip />
         <Legend />
         {resultEstimation.cudaKernels != null && <Bar dataKey="CUDA Kernels" stackId="a" fill="#8884d8" />}
         {resultEstimation.parameters != null && <Bar dataKey="Parameters" stackId="a" fill="#82ca9d" />}
         {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
-        {resultEstimation.activations != null && <Bar dataKey="activations" stackId="a" fill="#ff8042" />}
-        {resultEstimation.gradients != null && <Bar dataKey="gradients" stackId="a" fill="#81d4fa" />}
+        {resultEstimation.activations != null && <Bar dataKey="Activations" stackId="a" fill="#ff8042" />}
+        {resultEstimation.gradients != null && <Bar dataKey="Gradients" stackId="a" fill="#81d4fa" />}
         {resultEstimation.firstMoments != null && <Bar dataKey="firstMoments" stackId="a" fill="#f48fb1" />}
         {resultEstimation.secondMoments != null && <Bar dataKey="secondMoments" stackId="a" fill="#80cbc4" />}
       </BarChart>
@@ -61,6 +58,8 @@ enum Optimizer {
   SGD,
 }
 
+type Unit = "MiB" | "GiB"
+
 enum Precision {
   full,
   half,
@@ -68,6 +67,7 @@ enum Precision {
 
 interface ModelConfig {
   precision: Precision
+  outPrecision: Precision
   numParams: number
   hiddenSize: number
   vocabSize: number
@@ -114,7 +114,8 @@ const modelConfigPresets: {
     label: "NousResearch/Llama-2-7b-hf",
     modelConfig: {
       precision: Precision.half,
-      numParams: 6.738,
+      outPrecision: Precision.full,
+      numParams: 6.738415616,
       hiddenSize: 4096,
       vocabSize: 32000,
       numAttentionHeads: 32,
@@ -126,7 +127,8 @@ const modelConfigPresets: {
     label: "mistralai/Mistral-7B-v0.1",
     modelConfig: {
       precision: Precision.half,
-      numParams: 6.738,
+      outPrecision: Precision.full,
+      numParams: 7.241732096,
       hiddenSize: 4096,
       vocabSize: 32000,
       numAttentionHeads: 32,
@@ -138,8 +140,9 @@ const modelConfigPresets: {
     label: "gpt2-xl",
     modelConfig: {
       precision: Precision.full,
-      numParams: 1.555,
-      hiddenSize: 1024,
+      outPrecision: Precision.full,
+      numParams: 1.5576112,
+      hiddenSize: 1600,
       vocabSize: 50257,
       numAttentionHeads: 25,
       numKeyValueHeads: 25,
@@ -148,30 +151,57 @@ const modelConfigPresets: {
   },
 ]
 
+function round(num: number, fractionDigits: number): number {
+  return Number(num.toFixed(fractionDigits))
+}
+
+function getTotalUsage({ resultEstimation, unit }: { resultEstimation: ResultEstimation; unit: Unit }): number {
+  const precision = unit == "MiB" ? 0 : 3
+  return round(
+    resultEstimation.cudaKernels +
+      resultEstimation.parameters +
+      (resultEstimation.outputs || 0) +
+      (resultEstimation.activations || 0) +
+      (resultEstimation.gradients || 0) +
+      (resultEstimation.firstMoments || 0) +
+      (resultEstimation.secondMoments || 0),
+    precision,
+  )
+}
+
 function estimateResult({
   modelConfig,
   runConfig,
+  unit,
 }: {
   modelConfig: ModelConfig
   runConfig: RunConfig
+  unit: Unit
 }): ResultEstimation {
   const bytesPerParam = modelConfig.precision == Precision.full ? 4 : 2
+  const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
+  const divisor = unit == "MiB" ? 2 ** 20 : 2 ** 30
+  const precision = unit == "MiB" ? 0 : 3
   const resultEsimation: ResultEstimation = {
-    cudaKernels: 0.341,
-    parameters: (bytesPerParam * modelConfig.numParams * 10 ** 9) / 2 ** 30,
-    outputs: (4 * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) / 2 ** 30,
+    cudaKernels: round((361 * 2 ** 20) / divisor, precision),
+    parameters: round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision),
+    outputs: round(
+      (outBytesPerParam * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) / divisor,
+      precision,
+    ),
   }
-  console.log(resultEsimation)
-  console.log(modelConfig.vocabSize)
   return resultEsimation
 }
 
 export default function App() {
   const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[0])
+
   const [modelConfig, setModelConfig] = useState(modelConfigPresets[0].modelConfig)
   const [runConfig, setRunConfig] = useState(defaultRunConfig)
 
-  const resultEstimation = estimateResult({ modelConfig, runConfig })
+  const [resultUnit, setResultUnit] = useState<Unit>("MiB")
+
+  const resultEstimation = estimateResult({ modelConfig, runConfig, unit: resultUnit })
 
   return (
     <Container maxWidth="md">
@@ -300,7 +330,7 @@ export default function App() {
               }}
             />
 
-            <Stack spacing={1} direction="row" justifyContent="center">
+            <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
               <Chip
                 label="fp16/bf16"
                 color="primary"
@@ -314,6 +344,31 @@ export default function App() {
                 onClick={() => setModelConfig({ ...modelConfig, precision: Precision.full })}
               />
             </Stack>
+
+            {modelConfig.precision != Precision.full && (
+              <Stack spacing={1} alignItems="center" justifyContent="center">
+                <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
+                  <Typography variant="body1">Output Tensor dtype:</Typography>
+                  <Chip
+                    label="fp16/bf16"
+                    color="primary"
+                    variant={modelConfig.outPrecision == Precision.half ? "filled" : "outlined"}
+                    onClick={() => setModelConfig({ ...modelConfig, outPrecision: Precision.half })}
+                  />
+                  <Chip
+                    label="fp32"
+                    color="primary"
+                    variant={modelConfig.outPrecision == Precision.full ? "filled" : "outlined"}
+                    onClick={() => setModelConfig({ ...modelConfig, outPrecision: Precision.full })}
+                  />
+                </Stack>
+                <Typography variant="body2" color="textSecondary">
+                  Precision of output tensor is not always matches precision of model weights, because tensor is being
+                  casted to lower precision only if operation is considered safe. Layer Norm, for example, is not
+                  autocasted (Llama and Mistral fp32, gpt2-xl fp16).
+                </Typography>
+              </Stack>
+            )}
 
             <TextField
               label="Number of Parameters (billions)"
@@ -374,20 +429,55 @@ export default function App() {
               Estimation Result
             </Typography>
 
+            <Stack spacing={1} direction="row" justifyContent="center">
+              <Chip
+                label="MiB"
+                color="primary"
+                variant={resultUnit == "MiB" ? "filled" : "outlined"}
+                onClick={() => setResultUnit("MiB")}
+              />
+              <Chip
+                label="GiB"
+                color="primary"
+                variant={resultUnit == "GiB" ? "filled" : "outlined"}
+                onClick={() => setResultUnit("GiB")}
+              />
+            </Stack>
+
             <MyStackedBarChart resultEstimation={resultEstimation} numGPUs={runConfig.numGPUs} />
             <List dense={true}>
               <ListItem>
                 <ListItemText
-                  primary={"Model parameters use " + resultEstimation.parameters.toFixed(3) + " GiB of VRAM"}
-                  secondary={
-                    "Number of parameters (" +
-                    modelConfig.numParams +
-                    " billion) * number of bytes per parameter (" +
-                    (modelConfig.precision == Precision.full ? 4 : 2) +
-                    " bytes in case of " +
-                    (modelConfig.precision == Precision.full ? "full" : "half") +
-                    " precision)"
-                  }
+                  primary={`Total VRAM usage is ${getTotalUsage({ resultEstimation, unit: resultUnit })} ${resultUnit}`}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary={`Model parameters use ${resultEstimation.parameters} ${resultUnit} of VRAM`}
+                  secondary={`Number of parameters (${
+                    modelConfig.numParams
+                  } billion) * number of bytes per parameter (${
+                    modelConfig.precision == Precision.full ? 4 : 2
+                  } bytes in case of ${modelConfig.precision == Precision.full ? "full" : "half"} precision)`}
+                />
+              </ListItem>
+              {resultEstimation.outputs && (
+                <ListItem>
+                  <ListItemText
+                    primary={`Output tensor uses ${resultEstimation.outputs} ${resultUnit} of VRAM`}
+                    secondary={`Batch size (${runConfig.batchSize}) * sequence length (${
+                      runConfig.sequenceLength
+                    }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (${Math.max(
+                      modelConfig.outPrecision == Precision.full ? 4 : 2,
+                      modelConfig.precision == Precision.full ? 4 : 2,
+                    )})`}
+                  />
+                </ListItem>
+              )}
+              <ListItem>
+                <ListItemText
+                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM`}
+                  secondary={`Fixed value`}
                 />
               </ListItem>
             </List>
