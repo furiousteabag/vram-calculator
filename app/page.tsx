@@ -1,5 +1,9 @@
 "use client"
 
+import StackedBarChart from "@/app/_components/StackedBarChart"
+import { Optimizer, Precision, Unit } from "@/app/_interfaces"
+import { estimateResult, getTotalUsage } from "@/app/_lib"
+import { defaultRunConfig, modelConfigPresets } from "@/app/configurations"
 import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Checkbox from "@mui/material/Checkbox"
@@ -15,232 +19,11 @@ import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
 import React, { useState } from "react"
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-
-function MyStackedBarChart({ resultEstimation, numGPUs }: { resultEstimation: ResultEstimation; numGPUs: number }) {
-  let data = []
-
-  for (let i = numGPUs - 1; i >= 0; i--) {
-    data.push({
-      name: i,
-      "CUDA Kernels": resultEstimation.cudaKernels,
-      Parameters: resultEstimation.parameters,
-      Outputs: resultEstimation.outputs ?? 0,
-      Activations: resultEstimation.activations ?? 0,
-      Gradients: resultEstimation.gradients ?? 0,
-      firstMoments: resultEstimation.firstMoments ?? 0,
-      secondMoments: resultEstimation.secondMoments ?? 0,
-    })
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height={150 + 100 * Math.log2(numGPUs)}>
-      <BarChart layout="vertical" data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis type="number" />
-        <YAxis dataKey="name" type="category" label={{ value: "GPU Index", angle: -90 }} />
-        <Tooltip />
-        <Legend />
-        {resultEstimation.cudaKernels != null && <Bar dataKey="CUDA Kernels" stackId="a" fill="#8884d8" />}
-        {resultEstimation.parameters != null && <Bar dataKey="Parameters" stackId="a" fill="#82ca9d" />}
-        {resultEstimation.activations != null && <Bar dataKey="Activations" stackId="a" fill="#ff8042" />}
-        {resultEstimation.gradients != null && <Bar dataKey="Gradients" stackId="a" fill="#81d4fa" />}
-        {resultEstimation.firstMoments != null && <Bar dataKey="firstMoments" stackId="a" fill="#f48fb1" />}
-        {resultEstimation.secondMoments != null && <Bar dataKey="secondMoments" stackId="a" fill="#80cbc4" />}
-        {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
-      </BarChart>
-    </ResponsiveContainer>
-  )
-}
-
-enum Optimizer {
-  Adam,
-  SGD,
-}
-
-type Unit = "MiB" | "GiB"
-
-enum Precision {
-  full,
-  half,
-}
-
-interface ModelConfig {
-  precision: Precision
-  outPrecision: Precision
-  numParams: number
-  hiddenSize: number
-  vocabSize: number
-  numAttentionHeads: number
-  numKeyValueHeads: number
-  intermediateSize: number
-}
-
-interface RunConfig {
-  isTraining: boolean
-  optimizer: Optimizer
-  optimizerSGDMomentum: boolean
-  sequenceLength: number
-  batchSize: number
-  numGPUs: number
-  isFSDP: boolean
-}
-
-interface ResultEstimation {
-  cudaKernels: number
-  parameters: number
-  outputs?: number
-  activations?: number
-  gradients?: number
-  firstMoments?: number
-  secondMoments?: number
-}
-
-const defaultRunConfig: RunConfig = {
-  isTraining: false,
-  optimizer: Optimizer.Adam,
-  optimizerSGDMomentum: false,
-  sequenceLength: 1024,
-  batchSize: 8,
-  numGPUs: 1,
-  isFSDP: false,
-}
-
-const modelConfigPresets: {
-  label: string
-  modelConfig: ModelConfig
-}[] = [
-  {
-    label: "NousResearch/Llama-2-7b-hf",
-    modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
-      numParams: 6.738415616,
-      hiddenSize: 4096,
-      vocabSize: 32000,
-      numAttentionHeads: 32,
-      numKeyValueHeads: 32,
-      intermediateSize: 11008,
-    },
-  },
-  {
-    label: "mistralai/Mistral-7B-v0.1",
-    modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
-      numParams: 7.241732096,
-      hiddenSize: 4096,
-      vocabSize: 32000,
-      numAttentionHeads: 32,
-      numKeyValueHeads: 8,
-      intermediateSize: 14336,
-    },
-  },
-  {
-    label: "gpt2-xl",
-    modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
-      numParams: 1.5576112,
-      hiddenSize: 1600,
-      vocabSize: 50257,
-      numAttentionHeads: 25,
-      numKeyValueHeads: 25,
-      intermediateSize: 4 * 1600,
-    },
-  },
-  {
-    label: "gpt2-large",
-    modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
-      numParams: 0.77403008,
-      hiddenSize: 1280,
-      vocabSize: 50257,
-      numAttentionHeads: 20,
-      numKeyValueHeads: 20,
-      intermediateSize: 4 * 1280,
-    },
-  },
-  {
-    label: "gpt2-medium",
-    modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
-      numParams: 0.354823168,
-      hiddenSize: 1024,
-      vocabSize: 50257,
-      numAttentionHeads: 16,
-      numKeyValueHeads: 16,
-      intermediateSize: 4 * 1024,
-    },
-  },
-  {
-    label: "gpt2",
-    modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
-      numParams: 0.124439808,
-      hiddenSize: 768,
-      vocabSize: 50257,
-      numAttentionHeads: 12,
-      numKeyValueHeads: 12,
-      intermediateSize: 4 * 768,
-    },
-  },
-]
-
-function round(num: number, fractionDigits: number): number {
-  return Number(num.toFixed(fractionDigits))
-}
-
-function getTotalUsage({ resultEstimation, unit }: { resultEstimation: ResultEstimation; unit: Unit }): number {
-  const precision = unit == "MiB" ? 0 : 3
-  return round(
-    resultEstimation.cudaKernels +
-      resultEstimation.parameters +
-      (resultEstimation.outputs || 0) +
-      (resultEstimation.activations || 0) +
-      (resultEstimation.gradients || 0) +
-      (resultEstimation.firstMoments || 0) +
-      (resultEstimation.secondMoments || 0),
-    precision,
-  )
-}
-
-function estimateResult({
-  modelConfig,
-  runConfig,
-  unit,
-}: {
-  modelConfig: ModelConfig
-  runConfig: RunConfig
-  unit: Unit
-}): ResultEstimation {
-  const bytesPerParam = modelConfig.precision == Precision.full ? 4 : 2
-  const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
-  const divisor = unit == "MiB" ? 2 ** 20 : 2 ** 30
-  const precision = unit == "MiB" ? 0 : 3
-  const resultEsimation: ResultEstimation = {
-    cudaKernels: round((361 * 2 ** 20) / divisor, precision),
-    parameters: round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision),
-    outputs: round(
-      (outBytesPerParam * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) / divisor,
-      precision,
-    ),
-  }
-  if (runConfig.isTraining) {
-    resultEsimation.gradients = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
-  }
-  return resultEsimation
-}
 
 export default function App() {
   const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[0])
-
   const [modelConfig, setModelConfig] = useState(modelConfigPresets[0].modelConfig)
   const [runConfig, setRunConfig] = useState(defaultRunConfig)
-
   const [resultUnit, setResultUnit] = useState<Unit>("MiB")
 
   const resultEstimation = estimateResult({ modelConfig, runConfig, unit: resultUnit })
@@ -514,7 +297,7 @@ export default function App() {
               />
             </Stack>
 
-            <MyStackedBarChart resultEstimation={resultEstimation} numGPUs={runConfig.numGPUs} />
+            <StackedBarChart resultEstimation={resultEstimation} numGPUs={runConfig.numGPUs} />
             <List dense={true}>
               <ListItem>
                 <ListItemText
@@ -549,7 +332,9 @@ export default function App() {
                     primary={`Gradients use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
                       runConfig.numGPUs > 1 ? "per GPU" : ""
                     }`}
-                    secondary={`Gradient with the same precision for each parameter`}
+                    secondary={`Gradient is stored for each parameter with same precision (${
+                      modelConfig.precision == Precision.full ? 4 : 2
+                    } bytes) as parameter itself`}
                   />
                 </ListItem>
               )}
@@ -564,7 +349,11 @@ export default function App() {
                     }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (${Math.max(
                       modelConfig.outPrecision == Precision.full ? 4 : 2,
                       modelConfig.precision == Precision.full ? 4 : 2,
-                    )})`}
+                    )}) ${
+                      runConfig.isTraining
+                        ? "* 2 (we have to store probabilities after softmax output which are the same size as output)"
+                        : ""
+                    }`}
                   />
                 </ListItem>
               )}
