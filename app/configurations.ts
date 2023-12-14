@@ -41,6 +41,32 @@ export const modelConfigPresets: {
     },
   },
   {
+    label: "microsoft/phi-2",
+    modelConfig: {
+      precision: Precision.half,
+      outPrecision: Precision.full,
+      numParams: 2.78,
+      hiddenSize: 2560,
+      vocabSize: 51200,
+      numAttentionHeads: 32,
+      numKeyValueHeads: 32,
+      intermediateSize: 4 * 2560,
+    },
+  },
+  {
+    label: "microsoft/phi-1_5",
+    modelConfig: {
+      precision: Precision.half,
+      outPrecision: Precision.full,
+      numParams: 1.418,
+      hiddenSize: 2048,
+      vocabSize: 51200,
+      numAttentionHeads: 32,
+      numKeyValueHeads: 32,
+      intermediateSize: 4 * 2048,
+    },
+  },
+  {
     label: "gpt2-xl",
     modelConfig: {
       precision: Precision.full,
