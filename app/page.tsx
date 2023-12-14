@@ -127,7 +127,7 @@ export default function App() {
               helperText={runConfig.numGPUs === 0 ? "Can't be empty!" : ""}
             />
 
-            {runConfig.isTraining && (
+            {runConfig.isTraining && runConfig.numGPUs > 1 && (
               <FormControlLabel
                 control={
                   <Switch
@@ -338,6 +338,33 @@ export default function App() {
                   />
                 </ListItem>
               )}
+
+              {resultEstimation.firstMoments && (
+                <ListItem>
+                  <ListItemText
+                    primary={`First moments use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
+                      runConfig.numGPUs > 1 ? "per GPU" : ""
+                    }`}
+                    secondary={`Optimizer stores moving average of gradients for each parameter with same precision (${
+                      modelConfig.precision == Precision.full ? 4 : 2
+                    } bytes) as parameter itself`}
+                  />
+                </ListItem>
+              )}
+
+              {resultEstimation.secondMoments && (
+                <ListItem>
+                  <ListItemText
+                    primary={`Second moments use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
+                      runConfig.numGPUs > 1 ? "per GPU" : ""
+                    }`}
+                    secondary={`Optimizer stores moving average of squared gradients for each parameter with same precision (${
+                      modelConfig.precision == Precision.full ? 4 : 2
+                    } bytes) as parameter itself`}
+                  />
+                </ListItem>
+              )}
+
               {resultEstimation.outputs && (
                 <ListItem>
                   <ListItemText

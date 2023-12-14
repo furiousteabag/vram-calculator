@@ -1,4 +1,4 @@
-import { ModelConfig, Precision, ResultEstimation, RunConfig, Unit } from "@/app/_interfaces"
+import { ModelConfig, Optimizer, Precision, ResultEstimation, RunConfig, Unit } from "@/app/_interfaces"
 
 export function round(num: number, fractionDigits: number): number {
   return Number(num.toFixed(fractionDigits))
@@ -46,6 +46,13 @@ export function estimateResult({
   }
   if (runConfig.isTraining) {
     resultEsimation.gradients = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+    if (runConfig.optimizer == Optimizer.SGD && runConfig.optimizerSGDMomentum) {
+      resultEsimation.firstMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+    }
+    if (runConfig.optimizer == Optimizer.Adam) {
+      resultEsimation.firstMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.secondMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+    }
   }
   return resultEsimation
 }

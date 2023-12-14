@@ -17,8 +17,8 @@ export default function StackedBarChart({
       Outputs: resultEstimation.outputs ?? 0,
       Activations: resultEstimation.activations ?? 0,
       Gradients: resultEstimation.gradients ?? 0,
-      firstMoments: resultEstimation.firstMoments ?? 0,
-      secondMoments: resultEstimation.secondMoments ?? 0,
+      "First Moments": resultEstimation.firstMoments ?? 0,
+      "Second Moments": resultEstimation.secondMoments ?? 0,
     })
   }
 
@@ -33,9 +33,9 @@ export default function StackedBarChart({
         {resultEstimation.cudaKernels != null && <Bar dataKey="CUDA Kernels" stackId="a" fill="#8884d8" />}
         {resultEstimation.parameters != null && <Bar dataKey="Parameters" stackId="a" fill="#82ca9d" />}
         {resultEstimation.activations != null && <Bar dataKey="Activations" stackId="a" fill="#ff8042" />}
-        {resultEstimation.gradients != null && <Bar dataKey="Gradients" stackId="a" fill="#81d4fa" />}
-        {resultEstimation.firstMoments != null && <Bar dataKey="firstMoments" stackId="a" fill="#f48fb1" />}
-        {resultEstimation.secondMoments != null && <Bar dataKey="secondMoments" stackId="a" fill="#80cbc4" />}
+        {resultEstimation.gradients != null && <Bar dataKey="Gradients" stackId="a" fill="#ba000d" />}
+        {resultEstimation.firstMoments != null && <Bar dataKey="First Moments" stackId="a" fill="#f44336" />}
+        {resultEstimation.secondMoments != null && <Bar dataKey="Second Moments" stackId="a" fill="#ff7961" />}
         {resultEstimation.outputs != null && <Bar dataKey="Outputs" stackId="a" fill="#ffc658" />}
       </BarChart>
     </ResponsiveContainer>
