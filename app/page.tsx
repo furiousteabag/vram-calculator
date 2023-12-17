@@ -60,8 +60,45 @@ export default function App() {
               />
             </Stack>
 
+            {!runConfig.isTraining && (
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
+                <Typography variant="body1">Precision: </Typography>
+                <Chip
+                  label="fp16/bf16"
+                  color="primary"
+                  variant={runConfig.inferencePrecision == Precision.half ? "filled" : "outlined"}
+                  onClick={() => setRunConfig({ ...runConfig, inferencePrecision: Precision.half })}
+                />
+                <Chip
+                  label="fp32"
+                  color="primary"
+                  variant={runConfig.inferencePrecision == Precision.full ? "filled" : "outlined"}
+                  onClick={() => setRunConfig({ ...runConfig, inferencePrecision: Precision.full })}
+                />
+              </Stack>
+            )}
+
+            {runConfig.isTraining && (
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
+                <Typography variant="body1">Precision: </Typography>
+                <Chip
+                  label="mixed"
+                  color="primary"
+                  variant={runConfig.trainingPrecision == Precision.mixed ? "filled" : "outlined"}
+                  onClick={() => setRunConfig({ ...runConfig, trainingPrecision: Precision.mixed })}
+                />
+                <Chip
+                  label="full (fp32)"
+                  color="primary"
+                  variant={runConfig.trainingPrecision == Precision.full ? "filled" : "outlined"}
+                  onClick={() => setRunConfig({ ...runConfig, trainingPrecision: Precision.full })}
+                />
+              </Stack>
+            )}
+
             {runConfig.isTraining && (
               <Stack spacing={1} direction="row" justifyContent="center">
+                <Typography variant="body1">Optimizer: </Typography>
                 <Chip
                   label="Adam"
                   color="primary"
@@ -147,53 +184,13 @@ export default function App() {
               options={modelConfigPresets}
               renderInput={(params) => <TextField {...params} label="Parameters Preset" />}
               value={modelConfigPreset.modelConfig == modelConfig ? modelConfigPreset : null}
-              onChange={(event, newValue) => {
+              onChange={(_event, newValue) => {
                 if (newValue) {
                   setModelConfigPreset(newValue)
                   setModelConfig(newValue.modelConfig)
                 }
               }}
             />
-
-            <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
-              <Chip
-                label="fp16/bf16"
-                color="primary"
-                variant={modelConfig.precision == Precision.half ? "filled" : "outlined"}
-                onClick={() => setModelConfig({ ...modelConfig, precision: Precision.half })}
-              />
-              <Chip
-                label="fp32"
-                color="primary"
-                variant={modelConfig.precision == Precision.full ? "filled" : "outlined"}
-                onClick={() => setModelConfig({ ...modelConfig, precision: Precision.full })}
-              />
-            </Stack>
-
-            {modelConfig.precision != Precision.full && (
-              <Stack spacing={1} alignItems="center" justifyContent="center">
-                <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
-                  <Typography variant="body1">Output Tensor dtype:</Typography>
-                  <Chip
-                    label="fp16/bf16"
-                    color="primary"
-                    variant={modelConfig.outPrecision == Precision.half ? "filled" : "outlined"}
-                    onClick={() => setModelConfig({ ...modelConfig, outPrecision: Precision.half })}
-                  />
-                  <Chip
-                    label="fp32"
-                    color="primary"
-                    variant={modelConfig.outPrecision == Precision.full ? "filled" : "outlined"}
-                    onClick={() => setModelConfig({ ...modelConfig, outPrecision: Precision.full })}
-                  />
-                </Stack>
-
-                <Typography variant="body2" color="textSecondary">
-                  Usually, output type is the same as weights type, but Llama and Mistral models explicitly convert
-                  output to float32 with `.float()`
-                </Typography>
-              </Stack>
-            )}
 
             <TextField
               label="Number of Parameters (billions)"
@@ -312,7 +309,7 @@ export default function App() {
                   primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM ${
                     runConfig.numGPUs > 1 ? "per GPU" : ""
                   }`}
-                  secondary={`Fixed value`}
+                  secondary={`When PyTorch uses CUDA for the first time, it allocates between 300 MiB and 2 GiB of VRAM`}
                 />
               </ListItem>
               <ListItem>
@@ -322,7 +319,15 @@ export default function App() {
                   }`}
                   secondary={`Number of parameters (${
                     modelConfig.numParams
-                  } billion) * number of bytes per parameter (${modelConfig.precision == Precision.full ? 4 : 2})`}
+                  } billion) * number of bytes per parameter (${
+                    runConfig.isTraining
+                      ? runConfig.trainingPrecision == Precision.mixed
+                        ? "6; 4 for fp32 and 2 for fp16"
+                        : "4"
+                      : runConfig.inferencePrecision == Precision.full
+                        ? 4
+                        : 2
+                  })`}
                 />
               </ListItem>
 
@@ -332,9 +337,7 @@ export default function App() {
                     primary={`Gradients use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
                       runConfig.numGPUs > 1 ? "per GPU" : ""
                     }`}
-                    secondary={`Gradient is stored for each parameter with same precision (${
-                      modelConfig.precision == Precision.full ? 4 : 2
-                    } bytes) as parameter itself`}
+                    secondary={`Gradient is stored for each parameter in full precision`}
                   />
                 </ListItem>
               )}
@@ -342,12 +345,10 @@ export default function App() {
               {resultEstimation.firstMoments && (
                 <ListItem>
                   <ListItemText
-                    primary={`First moments use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
+                    primary={`First moments use ${resultEstimation.firstMoments} ${resultUnit} of VRAM ${
                       runConfig.numGPUs > 1 ? "per GPU" : ""
                     }`}
-                    secondary={`Optimizer stores moving average of gradients for each parameter with same precision (${
-                      modelConfig.precision == Precision.full ? 4 : 2
-                    } bytes) as parameter itself`}
+                    secondary={`Optimizer stores moving average of gradients for each parameter in full precision`}
                   />
                 </ListItem>
               )}
@@ -355,12 +356,10 @@ export default function App() {
               {resultEstimation.secondMoments && (
                 <ListItem>
                   <ListItemText
-                    primary={`Second moments use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
+                    primary={`Second moments use ${resultEstimation.secondMoments} ${resultUnit} of VRAM ${
                       runConfig.numGPUs > 1 ? "per GPU" : ""
                     }`}
-                    secondary={`Optimizer stores moving average of squared gradients for each parameter with same precision (${
-                      modelConfig.precision == Precision.full ? 4 : 2
-                    } bytes) as parameter itself`}
+                    secondary={`Optimizer stores moving average of squared gradients for each parameter in full precision`}
                   />
                 </ListItem>
               )}
@@ -373,13 +372,12 @@ export default function App() {
                     }`}
                     secondary={`Batch size (${runConfig.batchSize}) * sequence length (${
                       runConfig.sequenceLength
-                    }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (${Math.max(
-                      modelConfig.outPrecision == Precision.full ? 4 : 2,
-                      modelConfig.precision == Precision.full ? 4 : 2,
-                    )}) ${
+                    }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (4) ${
                       runConfig.isTraining
                         ? "* 2 (we have to store probabilities after softmax output which are the same size as output)"
-                        : ""
+                        : runConfig.inferencePrecision != Precision.full
+                          ? "(even we infer model in half precision, outputs are still almost always casted to fp32 within the model itself with .float())"
+                          : ""
                     }`}
                   />
                 </ListItem>

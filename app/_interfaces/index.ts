@@ -2,6 +2,7 @@ export type Unit = "MiB" | "GiB"
 
 export enum Precision {
   full,
+  mixed,
   half,
 }
 
@@ -11,8 +12,6 @@ export enum Optimizer {
 }
 
 export interface ModelConfig {
-  precision: Precision
-  outPrecision: Precision
   numParams: number
   hiddenSize: number
   vocabSize: number
@@ -23,6 +22,8 @@ export interface ModelConfig {
 
 export interface RunConfig {
   isTraining: boolean
+  inferencePrecision: Precision.full | Precision.half
+  trainingPrecision: Precision.full | Precision.mixed
   optimizer: Optimizer
   optimizerSGDMomentum: boolean
   sequenceLength: number

@@ -1,6 +1,8 @@
 import { ModelConfig, Optimizer, Precision, RunConfig } from "@/app/_interfaces"
 
 export const defaultRunConfig: RunConfig = {
+  inferencePrecision: Precision.half,
+  trainingPrecision: Precision.mixed,
   isTraining: false,
   optimizer: Optimizer.Adam,
   optimizerSGDMomentum: false,
@@ -17,8 +19,6 @@ export const modelConfigPresets: {
   {
     label: "NousResearch/Llama-2-7b-hf",
     modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
       numParams: 6.738,
       hiddenSize: 4096,
       vocabSize: 32000,
@@ -30,8 +30,6 @@ export const modelConfigPresets: {
   {
     label: "mistralai/Mistral-7B-v0.1",
     modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
       numParams: 7.242,
       hiddenSize: 4096,
       vocabSize: 32000,
@@ -43,8 +41,6 @@ export const modelConfigPresets: {
   {
     label: "microsoft/phi-2",
     modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
       numParams: 2.78,
       hiddenSize: 2560,
       vocabSize: 51200,
@@ -56,8 +52,6 @@ export const modelConfigPresets: {
   {
     label: "microsoft/phi-1_5",
     modelConfig: {
-      precision: Precision.half,
-      outPrecision: Precision.full,
       numParams: 1.418,
       hiddenSize: 2048,
       vocabSize: 51200,
@@ -69,8 +63,6 @@ export const modelConfigPresets: {
   {
     label: "gpt2-xl",
     modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
       numParams: 1.558,
       hiddenSize: 1600,
       vocabSize: 50257,
@@ -82,8 +74,6 @@ export const modelConfigPresets: {
   {
     label: "gpt2-large",
     modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
       numParams: 0.774,
       hiddenSize: 1280,
       vocabSize: 50257,
@@ -95,8 +85,6 @@ export const modelConfigPresets: {
   {
     label: "gpt2-medium",
     modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
       numParams: 0.355,
       hiddenSize: 1024,
       vocabSize: 50257,
@@ -108,8 +96,6 @@ export const modelConfigPresets: {
   {
     label: "gpt2",
     modelConfig: {
-      precision: Precision.full,
-      outPrecision: Precision.half,
       numParams: 0.124,
       hiddenSize: 768,
       vocabSize: 50257,

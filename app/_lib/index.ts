@@ -27,31 +27,37 @@ export function estimateResult({
   runConfig: RunConfig
   unit: Unit
 }): ResultEstimation {
-  const bytesPerParam = modelConfig.precision == Precision.full ? 4 : 2
-  const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
   const divisor = unit == "MiB" ? 2 ** 20 : 2 ** 30
   const precision = unit == "MiB" ? 0 : 3
+
+  const bytesPerParam = runConfig.isTraining
+    ? runConfig.trainingPrecision == Precision.mixed
+      ? 6
+      : 4
+    : runConfig.inferencePrecision == Precision.full
+      ? 4
+      : 2
+
+  // const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
+
   const resultEsimation: ResultEstimation = {
-    cudaKernels: round((361 * 2 ** 20) / divisor, precision),
+    cudaKernels: round((1000 * 2 ** 20) / divisor, precision),
     parameters: round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision),
     outputs: round(
-      ((runConfig.isTraining ? 2 : 1) *
-        outBytesPerParam *
-        runConfig.batchSize *
-        runConfig.sequenceLength *
-        modelConfig.vocabSize) /
+      ((runConfig.isTraining ? 2 : 1) * 4 * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) /
         divisor,
       precision,
     ),
   }
+
   if (runConfig.isTraining) {
-    resultEsimation.gradients = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+    resultEsimation.gradients = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
     if (runConfig.optimizer == Optimizer.SGD && runConfig.optimizerSGDMomentum) {
-      resultEsimation.firstMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
     }
     if (runConfig.optimizer == Optimizer.Adam) {
-      resultEsimation.firstMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
-      resultEsimation.secondMoments = round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.secondMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
     }
   }
   return resultEsimation
