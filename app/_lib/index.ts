@@ -38,6 +38,19 @@ export function estimateResult({
       ? 4
       : 2
 
+  const activations =
+    (runConfig.isTraining
+      ? runConfig.trainingPrecision == Precision.mixed
+        ? 1 * modelConfig.numLayers
+        : 2 * modelConfig.numLayers
+      : runConfig.inferencePrecision == Precision.full
+        ? 2
+        : 1) *
+    runConfig.sequenceLength *
+    runConfig.batchSize *
+    modelConfig.hiddenSize *
+    (34 + (5 * modelConfig.numAttentionHeads * runConfig.sequenceLength) / modelConfig.hiddenSize)
+
   // const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
 
   const resultEsimation: ResultEstimation = {
@@ -48,6 +61,7 @@ export function estimateResult({
         divisor,
       precision,
     ),
+    activations: round(activations / divisor, precision),
   }
 
   if (runConfig.isTraining) {

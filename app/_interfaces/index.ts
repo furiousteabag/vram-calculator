@@ -18,6 +18,7 @@ export interface ModelConfig {
   numAttentionHeads: number
   numKeyValueHeads: number
   intermediateSize: number
+  numLayers: number
 }
 
 export interface RunConfig {

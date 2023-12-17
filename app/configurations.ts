@@ -25,6 +25,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 32,
       numKeyValueHeads: 32,
       intermediateSize: 11008,
+      numLayers: 32,
     },
   },
   {
@@ -36,6 +37,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 32,
       numKeyValueHeads: 8,
       intermediateSize: 14336,
+      numLayers: 32,
     },
   },
   {
@@ -47,6 +49,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 32,
       numKeyValueHeads: 32,
       intermediateSize: 4 * 2560,
+      numLayers: 32,
     },
   },
   {
@@ -58,6 +61,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 32,
       numKeyValueHeads: 32,
       intermediateSize: 4 * 2048,
+      numLayers: 24,
     },
   },
   {
@@ -69,6 +73,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 25,
       numKeyValueHeads: 25,
       intermediateSize: 4 * 1600,
+      numLayers: 48,
     },
   },
   {
@@ -80,6 +85,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 20,
       numKeyValueHeads: 20,
       intermediateSize: 4 * 1280,
+      numLayers: 36,
     },
   },
   {
@@ -91,6 +97,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 16,
       numKeyValueHeads: 16,
       intermediateSize: 4 * 1024,
+      numLayers: 24,
     },
   },
   {
@@ -102,6 +109,7 @@ export const modelConfigPresets: {
       numAttentionHeads: 12,
       numKeyValueHeads: 12,
       intermediateSize: 4 * 768,
+      numLayers: 12,
     },
   },
 ]

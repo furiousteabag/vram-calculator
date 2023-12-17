@@ -271,6 +271,18 @@ export default function App() {
                   : "Expanding dimensionality within MLP block. Usully it is 4 * hidden size."
               }
             />
+
+            <TextField
+              label="Number of Layers"
+              value={modelConfig.numLayers > 0 ? modelConfig.numLayers : ""}
+              error={modelConfig.numLayers === 0}
+              onChange={(e) =>
+                Number(e.target.value) >= 0
+                  ? setModelConfig({ ...modelConfig, numLayers: Number(e.target.value) })
+                  : modelConfig.numLayers
+              }
+              helperText={modelConfig.numLayers === 0 ? "Can't be empty!" : ""}
+            />
           </Stack>
         </Grid>
         <Grid item alignItems="center" xs={12} sm={6}>
@@ -330,6 +342,16 @@ export default function App() {
                   })`}
                 />
               </ListItem>
+
+              {resultEstimation.activations && (
+                <ListItem>
+                  <ListItemText
+                    primary={`Activations use ${resultEstimation.activations} ${resultUnit} of VRAM ${
+                      runConfig.numGPUs > 1 ? "per GPU" : ""
+                    }`}
+                  />
+                </ListItem>
+              )}
 
               {resultEstimation.gradients && (
                 <ListItem>
