@@ -18,6 +18,47 @@ export function getTotalUsage({ resultEstimation, unit }: { resultEstimation: Re
   )
 }
 
+function calculateActivations({ modelConfig, runConfig }: { modelConfig: ModelConfig; runConfig: RunConfig }): number {
+  const bytesPerParam = runConfig.isTraining
+    ? runConfig.trainingPrecision == Precision.mixed
+      ? 2
+      : 4
+    : runConfig.inferencePrecision == Precision.full
+      ? 4
+      : 2
+
+  const { hiddenSize, numAttentionHeads, numKeyValueHeads, intermediateSize, numLayers } = modelConfig
+  const numKeyValHeads = numKeyValueHeads
+  const intermSize = intermediateSize
+  const headDim = hiddenSize / numAttentionHeads
+
+  const { batchSize: bs, sequenceLength: seqLength } = runConfig
+
+  const attentionInput = bytesPerParam * bs * seqLength * hiddenSize
+  const q = bytesPerParam * bs * seqLength * headDim * numAttentionHeads
+  const k = bytesPerParam * bs * seqLength * headDim * numKeyValHeads
+  const softmaxOutput = bytesPerParam * bs * numAttentionHeads * Math.pow(seqLength, 2)
+  const softmaxDropoutMask = 1 * bs * numAttentionHeads * Math.pow(seqLength, 2)
+  const dropoutOutput = bytesPerParam * bs * numAttentionHeads * Math.pow(seqLength, 2)
+  const v = bytesPerParam * bs * seqLength * headDim * numKeyValHeads
+  const outProjInput = bytesPerParam * bs * seqLength * numAttentionHeads * headDim
+  const attentionDropout = 1 * bs * seqLength * hiddenSize
+  const attentionBlock =
+    attentionInput + q + k + softmaxOutput + v + outProjInput + softmaxDropoutMask + dropoutOutput + attentionDropout
+
+  const mlpInput = bytesPerParam * bs * seqLength * hiddenSize
+  const activationInput = bytesPerParam * bs * seqLength * intermSize
+  const downProjInput = bytesPerParam * bs * seqLength * intermSize
+  const dropoutMask = 1 * bs * seqLength * hiddenSize
+  const mlpBlock = mlpInput + activationInput + downProjInput + dropoutMask
+
+  const layerNorms = bytesPerParam * bs * seqLength * hiddenSize * 2
+
+  const layer = attentionBlock + mlpBlock + layerNorms
+
+  return runConfig.isTraining ? layer * numLayers : layer
+}
+
 export function estimateResult({
   modelConfig,
   runConfig,
@@ -38,20 +79,21 @@ export function estimateResult({
       ? 4
       : 2
 
-  const activations =
-    (runConfig.isTraining
-      ? runConfig.trainingPrecision == Precision.mixed
-        ? 1 * modelConfig.numLayers
-        : 2 * modelConfig.numLayers
-      : runConfig.inferencePrecision == Precision.full
-        ? 2
-        : 1) *
-    runConfig.sequenceLength *
-    runConfig.batchSize *
-    modelConfig.hiddenSize *
-    (34 + (5 * modelConfig.numAttentionHeads * runConfig.sequenceLength) / modelConfig.hiddenSize)
-
+  // const activations =
+  //   (runConfig.isTraining
+  //     ? runConfig.trainingPrecision == Precision.mixed
+  //       ? 1 * modelConfig.numLayers
+  //       : 2 * modelConfig.numLayers
+  //     : runConfig.inferencePrecision == Precision.full
+  //       ? 2
+  //       : 1) *
+  //   runConfig.sequenceLength *
+  //   runConfig.batchSize *
+  //   modelConfig.hiddenSize *
+  //   (34 + (5 * modelConfig.numAttentionHeads * runConfig.sequenceLength) / modelConfig.hiddenSize)
   // const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
+
+  const activations = calculateActivations({ modelConfig, runConfig })
 
   const resultEsimation: ResultEstimation = {
     cudaKernels: round((1000 * 2 ** 20) / divisor, precision),

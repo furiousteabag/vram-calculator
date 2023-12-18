@@ -4,6 +4,8 @@ import StackedBarChart from "@/app/_components/StackedBarChart"
 import { Optimizer, Precision, Unit } from "@/app/_interfaces"
 import { estimateResult, getTotalUsage } from "@/app/_lib"
 import { defaultRunConfig, modelConfigPresets } from "@/app/configurations"
+import { HelpOutline } from "@mui/icons-material"
+import { IconButton, Tooltip } from "@mui/material"
 import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Checkbox from "@mui/material/Checkbox"
@@ -36,7 +38,7 @@ export default function App() {
             VRAM Estimator
           </Typography>
           <Typography variant="subtitle1" align="center">
-            Estimate GPU VRAM usage based on params
+            Estimate GPU VRAM usage of transformer-based models
           </Typography>
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -61,7 +63,7 @@ export default function App() {
             </Stack>
 
             {!runConfig.isTraining && (
-              <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="left">
                 <Typography variant="body1">Precision: </Typography>
                 <Chip
                   label="fp16/bf16"
@@ -79,7 +81,7 @@ export default function App() {
             )}
 
             {runConfig.isTraining && (
-              <Stack spacing={1} direction="row" alignItems="center" justifyContent="center">
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="left">
                 <Typography variant="body1">Precision: </Typography>
                 <Chip
                   label="mixed"
@@ -93,11 +95,20 @@ export default function App() {
                   variant={runConfig.trainingPrecision == Precision.full ? "filled" : "outlined"}
                   onClick={() => setRunConfig({ ...runConfig, trainingPrecision: Precision.full })}
                 />
+                <Tooltip
+                  title="Mixed Precision training mode maintains additional model parameters in half precision, speeding up forward pass and reducing activations size"
+                  enterTouchDelay={10}
+                  leaveTouchDelay={5000}
+                >
+                  <IconButton>
+                    <HelpOutline />
+                  </IconButton>
+                </Tooltip>
               </Stack>
             )}
 
             {runConfig.isTraining && (
-              <Stack spacing={1} direction="row" justifyContent="center">
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="left">
                 <Typography variant="body1">Optimizer: </Typography>
                 <Chip
                   label="Adam"
@@ -111,46 +122,46 @@ export default function App() {
                   variant={runConfig.optimizer === Optimizer.SGD ? "filled" : "outlined"}
                   onClick={() => setRunConfig({ ...runConfig, optimizer: Optimizer.SGD })}
                 />
+
+                {runConfig.isTraining && runConfig.optimizer == Optimizer.SGD && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={runConfig.optimizerSGDMomentum}
+                        onChange={(e) => setRunConfig({ ...runConfig, optimizerSGDMomentum: e.target.checked })}
+                      />
+                    }
+                    label="momentum"
+                  />
+                )}
               </Stack>
             )}
 
-            {runConfig.isTraining && runConfig.optimizer == Optimizer.SGD && (
-              <Box display="flex" justifyContent="center">
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={runConfig.optimizerSGDMomentum}
-                      onChange={(e) => setRunConfig({ ...runConfig, optimizerSGDMomentum: e.target.checked })}
-                    />
-                  }
-                  label="momentum"
-                />
-              </Box>
-            )}
+            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
+              <TextField
+                label="Sequence Length"
+                value={runConfig.sequenceLength > 0 ? runConfig.sequenceLength : ""}
+                error={runConfig.sequenceLength === 0}
+                onChange={(e) =>
+                  Number(e.target.value) >= 0
+                    ? setRunConfig({ ...runConfig, sequenceLength: Number(e.target.value) })
+                    : runConfig.sequenceLength
+                }
+                helperText={runConfig.sequenceLength === 0 ? "Can't be empty!" : ""}
+              />
 
-            <TextField
-              label="Sequence Length"
-              value={runConfig.sequenceLength > 0 ? runConfig.sequenceLength : ""}
-              error={runConfig.sequenceLength === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setRunConfig({ ...runConfig, sequenceLength: Number(e.target.value) })
-                  : runConfig.sequenceLength
-              }
-              helperText={runConfig.sequenceLength === 0 ? "Can't be empty!" : ""}
-            />
-
-            <TextField
-              label={runConfig.numGPUs > 1 ? "Per GPU Batch Size" : "Batch Size"}
-              value={runConfig.batchSize > 0 ? runConfig.batchSize : ""}
-              error={runConfig.batchSize === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setRunConfig({ ...runConfig, batchSize: Number(e.target.value) })
-                  : runConfig.batchSize
-              }
-              helperText={runConfig.batchSize === 0 ? "Can't be empty!" : ""}
-            />
+              <TextField
+                label={runConfig.numGPUs > 1 ? "Per GPU Batch Size" : "Batch Size"}
+                value={runConfig.batchSize > 0 ? runConfig.batchSize : ""}
+                error={runConfig.batchSize === 0}
+                onChange={(e) =>
+                  Number(e.target.value) >= 0
+                    ? setRunConfig({ ...runConfig, batchSize: Number(e.target.value) })
+                    : runConfig.batchSize
+                }
+                helperText={runConfig.batchSize === 0 ? "Can't be empty!" : ""}
+              />
+            </Stack>
 
             <TextField
               label="Number of GPUs"
@@ -180,6 +191,11 @@ export default function App() {
               Model Parameters
             </Typography>
 
+            <Typography variant="body1" align="center">
+              Model Parameters could be taken from <code>config.json</code> on HuggingFace or directly from model via{" "}
+              <code>model.config</code>
+            </Typography>
+
             <Autocomplete
               options={modelConfigPresets}
               renderInput={(params) => <TextField {...params} label="Parameters Preset" />}
@@ -204,85 +220,99 @@ export default function App() {
               helperText={modelConfig.numParams === 0 ? "Can't be empty!" : ""}
             />
 
-            <TextField
-              label="Hidden Size"
-              value={modelConfig.hiddenSize > 0 ? modelConfig.hiddenSize : ""}
-              error={modelConfig.hiddenSize === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, hiddenSize: Number(e.target.value) })
-                  : modelConfig.hiddenSize
-              }
-              helperText={modelConfig.hiddenSize === 0 ? "Can't be empty!" : ""}
-            />
+            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
+              <TextField
+                label="Number of Layers"
+                value={modelConfig.numLayers > 0 ? modelConfig.numLayers : ""}
+                error={modelConfig.numLayers === 0}
+                onChange={(e) =>
+                  Number(e.target.value) >= 0
+                    ? setModelConfig({ ...modelConfig, numLayers: Number(e.target.value) })
+                    : modelConfig.numLayers
+                }
+                helperText={modelConfig.numLayers === 0 ? "Can't be empty!" : ""}
+              />
 
-            <TextField
-              label="Vocab Size"
-              value={modelConfig.vocabSize > 0 ? modelConfig.vocabSize : ""}
-              error={modelConfig.vocabSize === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, vocabSize: Number(e.target.value) })
-                  : modelConfig.vocabSize
-              }
-              helperText={modelConfig.vocabSize === 0 ? "Can't be empty!" : ""}
-            />
+              <TextField
+                label="Vocab Size"
+                value={modelConfig.vocabSize > 0 ? modelConfig.vocabSize : ""}
+                error={modelConfig.vocabSize === 0}
+                onChange={(e) =>
+                  Number(e.target.value) >= 0
+                    ? setModelConfig({ ...modelConfig, vocabSize: Number(e.target.value) })
+                    : modelConfig.vocabSize
+                }
+                helperText={modelConfig.vocabSize === 0 ? "Can't be empty!" : ""}
+              />
+            </Stack>
 
-            <TextField
-              label="Number of Attention Heads"
-              value={modelConfig.numAttentionHeads > 0 ? modelConfig.numAttentionHeads : ""}
-              error={modelConfig.numAttentionHeads === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, numAttentionHeads: Number(e.target.value) })
-                  : modelConfig.numAttentionHeads
-              }
-              helperText={modelConfig.numAttentionHeads === 0 ? "Can't be empty!" : ""}
-            />
+            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
+              <Box flex={1}>
+                <TextField
+                  label="Hidden Size"
+                  value={modelConfig.hiddenSize > 0 ? modelConfig.hiddenSize : ""}
+                  error={modelConfig.hiddenSize === 0}
+                  onChange={(e) =>
+                    Number(e.target.value) >= 0
+                      ? setModelConfig({ ...modelConfig, hiddenSize: Number(e.target.value) })
+                      : modelConfig.hiddenSize
+                  }
+                  helperText={modelConfig.hiddenSize === 0 ? "Can't be empty!" : ""}
+                />
+              </Box>
 
-            <TextField
-              label="Number of Key Value Heads"
-              value={modelConfig.numKeyValueHeads > 0 ? modelConfig.numKeyValueHeads : ""}
-              error={modelConfig.numKeyValueHeads === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, numKeyValueHeads: Number(e.target.value) })
-                  : modelConfig.numKeyValueHeads
-              }
-              helperText={
-                modelConfig.numKeyValueHeads === 0
-                  ? "Can't be empty!"
-                  : "Might be different from number of attention heads when using Grouped Query Attention"
-              }
-            />
+              <Box flex={1}>
+                <TextField
+                  label="Intermediate Size"
+                  value={modelConfig.intermediateSize > 0 ? modelConfig.intermediateSize : ""}
+                  error={modelConfig.intermediateSize === 0}
+                  onChange={(e) =>
+                    Number(e.target.value) >= 0
+                      ? setModelConfig({ ...modelConfig, intermediateSize: Number(e.target.value) })
+                      : modelConfig.intermediateSize
+                  }
+                  helperText={
+                    modelConfig.intermediateSize === 0
+                      ? "Can't be empty!"
+                      : "Expanding dimensionality within MLP block. Usually it is 4 × hidden size."
+                  }
+                />
+              </Box>
+            </Stack>
 
-            <TextField
-              label="Intermediate Size"
-              value={modelConfig.intermediateSize > 0 ? modelConfig.intermediateSize : ""}
-              error={modelConfig.intermediateSize === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, intermediateSize: Number(e.target.value) })
-                  : modelConfig.intermediateSize
-              }
-              helperText={
-                modelConfig.intermediateSize === 0
-                  ? "Can't be empty!"
-                  : "Expanding dimensionality within MLP block. Usully it is 4 * hidden size."
-              }
-            />
+            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
+              <Box flex={1}>
+                <TextField
+                  label="Number of Attention Heads"
+                  value={modelConfig.numAttentionHeads > 0 ? modelConfig.numAttentionHeads : ""}
+                  error={modelConfig.numAttentionHeads === 0}
+                  onChange={(e) =>
+                    Number(e.target.value) >= 0
+                      ? setModelConfig({ ...modelConfig, numAttentionHeads: Number(e.target.value) })
+                      : modelConfig.numAttentionHeads
+                  }
+                  helperText={modelConfig.numAttentionHeads === 0 ? "Can't be empty!" : ""}
+                />
+              </Box>
 
-            <TextField
-              label="Number of Layers"
-              value={modelConfig.numLayers > 0 ? modelConfig.numLayers : ""}
-              error={modelConfig.numLayers === 0}
-              onChange={(e) =>
-                Number(e.target.value) >= 0
-                  ? setModelConfig({ ...modelConfig, numLayers: Number(e.target.value) })
-                  : modelConfig.numLayers
-              }
-              helperText={modelConfig.numLayers === 0 ? "Can't be empty!" : ""}
-            />
+              <Box flex={1}>
+                <TextField
+                  label="Number of Key Value Heads"
+                  value={modelConfig.numKeyValueHeads > 0 ? modelConfig.numKeyValueHeads : ""}
+                  error={modelConfig.numKeyValueHeads === 0}
+                  onChange={(e) =>
+                    Number(e.target.value) >= 0
+                      ? setModelConfig({ ...modelConfig, numKeyValueHeads: Number(e.target.value) })
+                      : modelConfig.numKeyValueHeads
+                  }
+                  helperText={
+                    modelConfig.numKeyValueHeads === 0
+                      ? "Can't be empty!"
+                      : "Might be different from number of attention heads when using Grouped Query Attention"
+                  }
+                />
+              </Box>
+            </Stack>
           </Stack>
         </Grid>
         <Grid item alignItems="center" xs={12} sm={6}>
@@ -310,31 +340,47 @@ export default function App() {
             <List dense={true}>
               <ListItem>
                 <ListItemText
-                  primary={`Total VRAM usage is ${getTotalUsage({
-                    resultEstimation,
-                    unit: resultUnit,
-                  })} ${resultUnit} ${runConfig.numGPUs > 1 ? "per GPU" : ""}`}
+                  primary={
+                    <Typography>
+                      Total VRAM usage is{" "}
+                      <b>
+                        {getTotalUsage({
+                          resultEstimation,
+                          unit: resultUnit,
+                        })}{" "}
+                      </b>{" "}
+                      {resultUnit} {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                    </Typography>
+                  }
                 />
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary={`CUDA kernels use ${resultEstimation.cudaKernels} ${resultUnit} of VRAM ${
-                    runConfig.numGPUs > 1 ? "per GPU" : ""
-                  }`}
+                  primary={
+                    <span>
+                      <span style={{ color: "#8884d8", fontWeight: "bold" }}>CUDA Kernels</span> use
+                      <span style={{ fontWeight: "bold" }}> {resultEstimation.cudaKernels} </span>
+                      {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                    </span>
+                  }
                   secondary={`When PyTorch uses CUDA for the first time, it allocates between 300 MiB and 2 GiB of VRAM`}
                 />
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary={`Model parameters use ${resultEstimation.parameters} ${resultUnit} of VRAM ${
-                    runConfig.numGPUs > 1 ? "per GPU" : ""
-                  }`}
-                  secondary={`Number of parameters (${
+                  primary={
+                    <span>
+                      <span style={{ color: "#76ba1b", fontWeight: "bold" }}>Parameters</span> use
+                      <span style={{ fontWeight: "bold" }}> {resultEstimation.parameters} </span>
+                      {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                    </span>
+                  }
+                  secondary={`Number of Parameters (${
                     modelConfig.numParams
-                  } billion) * number of bytes per parameter (${
+                  } billion) × number of bytes per parameter (${
                     runConfig.isTraining
                       ? runConfig.trainingPrecision == Precision.mixed
-                        ? "6; 4 for fp32 and 2 for fp16"
+                        ? "6; parameters are stored in both full precision and half precision"
                         : "4"
                       : runConfig.inferencePrecision == Precision.full
                         ? 4
@@ -346,9 +392,19 @@ export default function App() {
               {resultEstimation.activations && (
                 <ListItem>
                   <ListItemText
-                    primary={`Activations use ${resultEstimation.activations} ${resultUnit} of VRAM ${
-                      runConfig.numGPUs > 1 ? "per GPU" : ""
-                    }`}
+                    primary={
+                      <span>
+                        <span style={{ color: "#a4de02", fontWeight: "bold" }}>Activations</span> use
+                        <span style={{ fontWeight: "bold" }}> {resultEstimation.activations} </span>
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      </span>
+                    }
+                    secondary={
+                      (runConfig.isTraining
+                        ? `Sum of sizes of all intermediate tensors during forward pass across all ${modelConfig.numLayers} layers.`
+                        : `Size of a biggest tensor within forward pass. It is estimated as the sum of all intermediate tensors within computation of a single layer.`) +
+                      ` Activations size have quadratic dependence on Sequence Length.`
+                    }
                   />
                 </ListItem>
               )}
@@ -356,10 +412,14 @@ export default function App() {
               {resultEstimation.gradients && (
                 <ListItem>
                   <ListItemText
-                    primary={`Gradients use ${resultEstimation.gradients} ${resultUnit} of VRAM ${
-                      runConfig.numGPUs > 1 ? "per GPU" : ""
-                    }`}
-                    secondary={`Gradient is stored for each parameter in full precision`}
+                    primary={
+                      <span>
+                        <span style={{ color: "#ba000d", fontWeight: "bold" }}>Gradients</span> use
+                        <span style={{ fontWeight: "bold" }}> {resultEstimation.gradients} </span>
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      </span>
+                    }
+                    secondary={`Gradient is stored for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
                   />
                 </ListItem>
               )}
@@ -367,10 +427,14 @@ export default function App() {
               {resultEstimation.firstMoments && (
                 <ListItem>
                   <ListItemText
-                    primary={`First moments use ${resultEstimation.firstMoments} ${resultUnit} of VRAM ${
-                      runConfig.numGPUs > 1 ? "per GPU" : ""
-                    }`}
-                    secondary={`Optimizer stores moving average of gradients for each parameter in full precision`}
+                    primary={
+                      <span>
+                        <span style={{ color: "#f44336", fontWeight: "bold" }}>First Moments</span> use
+                        <span style={{ fontWeight: "bold" }}> {resultEstimation.firstMoments} </span>
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      </span>
+                    }
+                    secondary={`Optimizer stores moving average of gradients for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
                   />
                 </ListItem>
               )}
@@ -378,10 +442,14 @@ export default function App() {
               {resultEstimation.secondMoments && (
                 <ListItem>
                   <ListItemText
-                    primary={`Second moments use ${resultEstimation.secondMoments} ${resultUnit} of VRAM ${
-                      runConfig.numGPUs > 1 ? "per GPU" : ""
-                    }`}
-                    secondary={`Optimizer stores moving average of squared gradients for each parameter in full precision`}
+                    primary={
+                      <span>
+                        <span style={{ color: "#ff7961", fontWeight: "bold" }}>Second Moments</span> use
+                        <span style={{ fontWeight: "bold" }}> {resultEstimation.secondMoments} </span>
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      </span>
+                    }
+                    secondary={`Optimizer stores moving average of squared gradients for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
                   />
                 </ListItem>
               )}
@@ -389,16 +457,20 @@ export default function App() {
               {resultEstimation.outputs && (
                 <ListItem>
                   <ListItemText
-                    primary={`Output tensor uses ${resultEstimation.outputs} ${resultUnit} of VRAM ${
-                      runConfig.numGPUs > 1 ? "per GPU" : ""
-                    }`}
-                    secondary={`Batch size (${runConfig.batchSize}) * sequence length (${
+                    primary={
+                      <span>
+                        <span style={{ color: "#ffc658", fontWeight: "bold" }}>Output tensor</span> uses
+                        <span style={{ fontWeight: "bold" }}> {resultEstimation.outputs} </span>
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      </span>
+                    }
+                    secondary={`Batch Size (${runConfig.batchSize}) × Sequence Length (${
                       runConfig.sequenceLength
-                    }) * vocabulary size (${modelConfig.vocabSize}) * number of bytes per parameter (4) ${
+                    }) × Vocabulary Size (${modelConfig.vocabSize}) × number of bytes per parameter (4) ${
                       runConfig.isTraining
-                        ? "* 2 (we have to store probabilities after softmax output which are the same size as output)"
+                        ? "× 2 (storing probabilities after softmax output which are the same size as output)"
                         : runConfig.inferencePrecision != Precision.full
-                          ? "(even we infer model in half precision, outputs are still almost always casted to fp32 within the model itself with .float())"
+                          ? "(even we infer model in half precision, outputs are still almost always casted to fp32 within the model itself)"
                           : ""
                     }`}
                   />

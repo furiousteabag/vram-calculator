@@ -23,7 +23,7 @@ export default function StackedBarChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={150 + 100 * Math.log2(numGPUs)}>
+    <ResponsiveContainer width="100%" height={170 + 100 * Math.log2(numGPUs)}>
       <BarChart layout="vertical" data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" />

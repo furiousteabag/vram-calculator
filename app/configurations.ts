@@ -6,7 +6,7 @@ export const defaultRunConfig: RunConfig = {
   isTraining: false,
   optimizer: Optimizer.Adam,
   optimizerSGDMomentum: false,
-  sequenceLength: 1024,
+  sequenceLength: 512,
   batchSize: 8,
   numGPUs: 1,
   isFSDP: false,
