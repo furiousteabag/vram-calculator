@@ -23,8 +23,8 @@ import Typography from "@mui/material/Typography"
 import React, { useState } from "react"
 
 export default function App() {
-  const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[0])
-  const [modelConfig, setModelConfig] = useState(modelConfigPresets[0].modelConfig)
+  const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[3])
+  const [modelConfig, setModelConfig] = useState(modelConfigPresets[3].modelConfig)
   const [runConfig, setRunConfig] = useState(defaultRunConfig)
   const [resultUnit, setResultUnit] = useState<Unit>("MiB")
 

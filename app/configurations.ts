@@ -3,11 +3,11 @@ import { ModelConfig, Optimizer, Precision, RunConfig } from "@/app/_interfaces"
 export const defaultRunConfig: RunConfig = {
   inferencePrecision: Precision.half,
   trainingPrecision: Precision.mixed,
-  isTraining: false,
-  optimizer: Optimizer.Adam,
-  optimizerSGDMomentum: false,
+  isTraining: true,
+  optimizer: Optimizer.SGD,
+  optimizerSGDMomentum: true,
   sequenceLength: 512,
-  batchSize: 8,
+  batchSize: 4,
   numGPUs: 1,
   isFSDP: false,
 }
