@@ -14,7 +14,7 @@ export default function StackedBarChart({
       name: i,
       "CUDA Kernels": resultEstimation.cudaKernels,
       Parameters: resultEstimation.parameters,
-      Outputs: resultEstimation.outputs ?? 0,
+      Outputs: resultEstimation.outputs !== undefined && i === 0 ? resultEstimation.outputs : 0,
       Activations: resultEstimation.activations ?? 0,
       Gradients: resultEstimation.gradients ?? 0,
       "First Moments": resultEstimation.firstMoments ?? 0,

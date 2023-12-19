@@ -2,7 +2,7 @@
 
 import StackedBarChart from "@/app/_components/StackedBarChart"
 import { Optimizer, Precision, Unit } from "@/app/_interfaces"
-import { estimateResult, getTotalUsage } from "@/app/_lib"
+import { estimateResult, getTotalUsagePerGPU } from "@/app/_lib"
 import { defaultRunConfig, modelConfigPresets } from "@/app/configurations"
 import { HelpOutline } from "@mui/icons-material"
 import { IconButton, Tooltip } from "@mui/material"
@@ -23,8 +23,8 @@ import Typography from "@mui/material/Typography"
 import React, { useState } from "react"
 
 export default function App() {
-  const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[3])
-  const [modelConfig, setModelConfig] = useState(modelConfigPresets[3].modelConfig)
+  const [modelConfigPreset, setModelConfigPreset] = useState(modelConfigPresets[5])
+  const [modelConfig, setModelConfig] = useState(modelConfigPresets[5].modelConfig)
   const [runConfig, setRunConfig] = useState(defaultRunConfig)
   const [resultUnit, setResultUnit] = useState<Unit>("MiB")
 
@@ -187,6 +187,34 @@ export default function App() {
               />
             )}
 
+            {!runConfig.isTraining && runConfig.numGPUs > 1 && (
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="left">
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={runConfig.isInferenceModelParallelism}
+                      onClick={() =>
+                        setRunConfig({
+                          ...runConfig,
+                          isInferenceModelParallelism: !runConfig.isInferenceModelParallelism,
+                        })
+                      }
+                    />
+                  }
+                  label="Model Parallelism"
+                />
+                <Tooltip
+                  title="Split model layers across available GPUs. This is default behaviour when using device_map='auto' on model loading with transformers and accelerate"
+                  enterTouchDelay={10}
+                  leaveTouchDelay={5000}
+                >
+                  <IconButton>
+                    <HelpOutline />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            )}
+
             <Typography variant="h5" align="center" sx={{ fontWeight: "bold" }}>
               Model Parameters
             </Typography>
@@ -263,6 +291,22 @@ export default function App() {
 
               <Box flex={1}>
                 <TextField
+                  label="Number of Attention Heads"
+                  value={modelConfig.numAttentionHeads > 0 ? modelConfig.numAttentionHeads : ""}
+                  error={modelConfig.numAttentionHeads === 0}
+                  onChange={(e) =>
+                    Number(e.target.value) >= 0
+                      ? setModelConfig({ ...modelConfig, numAttentionHeads: Number(e.target.value) })
+                      : modelConfig.numAttentionHeads
+                  }
+                  helperText={modelConfig.numAttentionHeads === 0 ? "Can't be empty!" : ""}
+                />
+              </Box>
+            </Stack>
+
+            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
+              <Box flex={1}>
+                <TextField
                   label="Intermediate Size"
                   value={modelConfig.intermediateSize > 0 ? modelConfig.intermediateSize : ""}
                   error={modelConfig.intermediateSize === 0}
@@ -276,22 +320,6 @@ export default function App() {
                       ? "Can't be empty!"
                       : "Expanding dimensionality within MLP block. Usually it is 4 × hidden size."
                   }
-                />
-              </Box>
-            </Stack>
-
-            <Stack spacing={1} direction="row" alignItems="top" justifyContent="center">
-              <Box flex={1}>
-                <TextField
-                  label="Number of Attention Heads"
-                  value={modelConfig.numAttentionHeads > 0 ? modelConfig.numAttentionHeads : ""}
-                  error={modelConfig.numAttentionHeads === 0}
-                  onChange={(e) =>
-                    Number(e.target.value) >= 0
-                      ? setModelConfig({ ...modelConfig, numAttentionHeads: Number(e.target.value) })
-                      : modelConfig.numAttentionHeads
-                  }
-                  helperText={modelConfig.numAttentionHeads === 0 ? "Can't be empty!" : ""}
                 />
               </Box>
 
@@ -337,20 +365,37 @@ export default function App() {
             </Stack>
 
             <StackedBarChart resultEstimation={resultEstimation} numGPUs={runConfig.numGPUs} />
+
             <List dense={true}>
               <ListItem>
                 <ListItemText
                   primary={
-                    <Typography>
+                    <Typography variant="body1">
                       Total VRAM usage is{" "}
                       <b>
-                        {getTotalUsage({
+                        {getTotalUsagePerGPU({
                           resultEstimation,
                           unit: resultUnit,
+                          isFirst: true,
                         })}{" "}
                       </b>{" "}
-                      {resultUnit} {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                      {resultUnit} {runConfig.numGPUs > 1 ? "on 0-th GPU" : ""}
                     </Typography>
+                  }
+                  secondary={
+                    runConfig.numGPUs > 1 && (
+                      <Typography variant="body1">
+                        Total VRAM usage is{" "}
+                        <b>
+                          {getTotalUsagePerGPU({
+                            resultEstimation,
+                            unit: resultUnit,
+                            isFirst: false,
+                          })}
+                        </b>{" "}
+                        {resultUnit} on rest GPUs
+                      </Typography>
+                    )
                   }
                 />
               </ListItem>
@@ -385,7 +430,11 @@ export default function App() {
                       : runConfig.inferencePrecision == Precision.full
                         ? 4
                         : 2
-                  })`}
+                  }) ${
+                    !runConfig.isTraining && runConfig.numGPUs > 1 && runConfig.isInferenceModelParallelism
+                      ? `÷ Number of GPUs (${runConfig.numGPUs})`
+                      : ""
+                  }`}
                 />
               </ListItem>
 
@@ -461,7 +510,7 @@ export default function App() {
                       <span>
                         <span style={{ color: "#ffc658", fontWeight: "bold" }}>Output tensor</span> uses
                         <span style={{ fontWeight: "bold" }}> {resultEstimation.outputs} </span>
-                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
+                        {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "(same GPU as inputs)" : ""}
                       </span>
                     }
                     secondary={`Batch Size (${runConfig.batchSize}) × Sequence Length (${

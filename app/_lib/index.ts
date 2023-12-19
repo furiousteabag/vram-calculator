@@ -4,12 +4,20 @@ export function round(num: number, fractionDigits: number): number {
   return Number(num.toFixed(fractionDigits))
 }
 
-export function getTotalUsage({ resultEstimation, unit }: { resultEstimation: ResultEstimation; unit: Unit }): number {
+export function getTotalUsagePerGPU({
+  resultEstimation,
+  unit,
+  isFirst,
+}: {
+  resultEstimation: ResultEstimation
+  unit: Unit
+  isFirst: boolean
+}): number {
   const precision = unit == "MiB" ? 0 : 3
   return round(
     resultEstimation.cudaKernels +
       resultEstimation.parameters +
-      (resultEstimation.outputs || 0) +
+      (resultEstimation.outputs || 0) * Number(isFirst) +
       (resultEstimation.activations || 0) +
       (resultEstimation.gradients || 0) +
       (resultEstimation.firstMoments || 0) +
@@ -95,9 +103,12 @@ export function estimateResult({
 
   const activations = calculateActivations({ modelConfig, runConfig })
 
+  const gpuDivisor =
+    !runConfig.isTraining && runConfig.numGPUs > 1 && runConfig.isInferenceModelParallelism ? runConfig.numGPUs : 1
+
   const resultEsimation: ResultEstimation = {
     cudaKernels: round((1000 * 2 ** 20) / divisor, precision),
-    parameters: round((bytesPerParam * modelConfig.numParams * 10 ** 9) / divisor, precision),
+    parameters: round((bytesPerParam * modelConfig.numParams * 10 ** 9) / gpuDivisor / divisor, precision),
     outputs: round(
       ((runConfig.isTraining ? 2 : 1) * 4 * runConfig.batchSize * runConfig.sequenceLength * modelConfig.vocabSize) /
         divisor,

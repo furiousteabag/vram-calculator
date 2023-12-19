@@ -31,6 +31,7 @@ export interface RunConfig {
   batchSize: number
   numGPUs: number
   isFSDP: boolean
+  isInferenceModelParallelism: boolean
 }
 
 export interface ResultEstimation {
