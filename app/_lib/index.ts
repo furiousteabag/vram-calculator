@@ -101,10 +101,17 @@ export function estimateResult({
   //   (34 + (5 * modelConfig.numAttentionHeads * runConfig.sequenceLength) / modelConfig.hiddenSize)
   // const outBytesPerParam = Math.max(modelConfig.outPrecision == Precision.full ? 4 : 2, bytesPerParam)
 
-  const activations = calculateActivations({ modelConfig, runConfig })
+  let activations = calculateActivations({ modelConfig, runConfig })
+
+  if (runConfig.numGPUs > 1 && runConfig.isTraining && runConfig.isFSDP) {
+    activations /= runConfig.numGPUs
+  }
 
   const gpuDivisor =
-    !runConfig.isTraining && runConfig.numGPUs > 1 && runConfig.isInferenceModelParallelism ? runConfig.numGPUs : 1
+    runConfig.numGPUs > 1 &&
+    ((!runConfig.isTraining && runConfig.isInferenceModelParallelism) || (runConfig.isTraining && runConfig.isFSDP))
+      ? runConfig.numGPUs
+      : 1
 
   const resultEsimation: ResultEstimation = {
     cudaKernels: round((1000 * 2 ** 20) / divisor, precision),
@@ -118,13 +125,13 @@ export function estimateResult({
   }
 
   if (runConfig.isTraining) {
-    resultEsimation.gradients = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
+    resultEsimation.gradients = round((4 * modelConfig.numParams * 10 ** 9) / gpuDivisor / divisor, precision)
     if (runConfig.optimizer == Optimizer.SGD && runConfig.optimizerSGDMomentum) {
-      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / gpuDivisor / divisor, precision)
     }
     if (runConfig.optimizer == Optimizer.Adam) {
-      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
-      resultEsimation.secondMoments = round((4 * modelConfig.numParams * 10 ** 9) / divisor, precision)
+      resultEsimation.firstMoments = round((4 * modelConfig.numParams * 10 ** 9) / gpuDivisor / divisor, precision)
+      resultEsimation.secondMoments = round((4 * modelConfig.numParams * 10 ** 9) / gpuDivisor / divisor, precision)
     }
   }
   return resultEsimation

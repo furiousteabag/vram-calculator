@@ -9,7 +9,7 @@ export const defaultRunConfig: RunConfig = {
   sequenceLength: 512,
   batchSize: 4,
   numGPUs: 1,
-  isFSDP: false,
+  isFSDP: true,
   isInferenceModelParallelism: true,
 }
 

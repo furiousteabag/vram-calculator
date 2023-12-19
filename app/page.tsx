@@ -176,15 +176,26 @@ export default function App() {
             />
 
             {runConfig.isTraining && runConfig.numGPUs > 1 && (
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={runConfig.isFSDP}
-                    onClick={() => setRunConfig({ ...runConfig, isFSDP: !runConfig.isFSDP })}
-                  />
-                }
-                label="FSDP parallelization"
-              />
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="left">
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={runConfig.isFSDP}
+                      onClick={() => setRunConfig({ ...runConfig, isFSDP: !runConfig.isFSDP })}
+                    />
+                  }
+                  label="FSDP Full Shard"
+                />
+                <Tooltip
+                  title="Shard model layers, activations, gradients and optimizer states across available GPUs"
+                  enterTouchDelay={10}
+                  leaveTouchDelay={5000}
+                >
+                  <IconButton>
+                    <HelpOutline />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
             )}
 
             {!runConfig.isTraining && runConfig.numGPUs > 1 && (
@@ -393,7 +404,7 @@ export default function App() {
                             isFirst: false,
                           })}
                         </b>{" "}
-                        {resultUnit} on rest GPUs
+                        {resultUnit} on each other GPU
                       </Typography>
                     )
                   }
@@ -431,7 +442,9 @@ export default function App() {
                         ? 4
                         : 2
                   }) ${
-                    !runConfig.isTraining && runConfig.numGPUs > 1 && runConfig.isInferenceModelParallelism
+                    runConfig.numGPUs > 1 &&
+                    ((!runConfig.isTraining && runConfig.isInferenceModelParallelism) ||
+                      (runConfig.isTraining && runConfig.isFSDP))
                       ? `÷ Number of GPUs (${runConfig.numGPUs})`
                       : ""
                   }`}
@@ -450,7 +463,11 @@ export default function App() {
                     }
                     secondary={
                       (runConfig.isTraining
-                        ? `Sum of sizes of all intermediate tensors during forward pass across all ${modelConfig.numLayers} layers.`
+                        ? `Sum of sizes of all intermediate tensors during forward pass across all ${
+                            modelConfig.numLayers
+                          } layers${
+                            runConfig.numGPUs > 1 && runConfig.isFSDP ? ` ÷ Number of GPUs (${runConfig.numGPUs})` : ""
+                          }.`
                         : `Size of a biggest tensor within forward pass. It is estimated as the sum of all intermediate tensors within computation of a single layer.`) +
                       ` Activations size have quadratic dependence on Sequence Length.`
                     }
@@ -468,7 +485,11 @@ export default function App() {
                         {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
                       </span>
                     }
-                    secondary={`Gradient is stored for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
+                    secondary={`Gradient is stored for each parameter in full precision, so it is Number of Parameters (${
+                      modelConfig.numParams
+                    } billion) × number of bytes per parameter (4) ${
+                      runConfig.numGPUs > 1 && runConfig.isFSDP ? `÷ Number of GPUs (${runConfig.numGPUs})` : ""
+                    }`}
                   />
                 </ListItem>
               )}
@@ -483,7 +504,11 @@ export default function App() {
                         {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
                       </span>
                     }
-                    secondary={`Optimizer stores moving average of gradients for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
+                    secondary={`Optimizer stores moving average of gradients for each parameter in full precision, so it is Number of Parameters (${
+                      modelConfig.numParams
+                    } billion) × number of bytes per parameter (4) ${
+                      runConfig.numGPUs > 1 && runConfig.isFSDP ? `÷ Number of GPUs (${runConfig.numGPUs})` : ""
+                    }`}
                   />
                 </ListItem>
               )}
@@ -498,7 +523,11 @@ export default function App() {
                         {resultUnit} of VRAM {runConfig.numGPUs > 1 ? "per GPU" : ""}
                       </span>
                     }
-                    secondary={`Optimizer stores moving average of squared gradients for each parameter in full precision, so it is Number of Parameters (${modelConfig.numParams} billion) × number of bytes per parameter (4)`}
+                    secondary={`Optimizer stores moving average of squared gradients for each parameter in full precision, so it is Number of Parameters (${
+                      modelConfig.numParams
+                    } billion) × number of bytes per parameter (4) ${
+                      runConfig.numGPUs > 1 && runConfig.isFSDP ? `÷ Number of GPUs (${runConfig.numGPUs})` : ""
+                    }`}
                   />
                 </ListItem>
               )}
