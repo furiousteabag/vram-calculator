@@ -10,6 +10,7 @@ export const defaultRunConfig: RunConfig = {
   batchSize: 4,
   numGPUs: 1,
   isFSDP: false,
+  isInferenceModelParallelism: true,
 }
 
 export const modelConfigPresets: {
@@ -17,9 +18,33 @@ export const modelConfigPresets: {
   modelConfig: ModelConfig
 }[] = [
   {
+    label: "NousResearch/Llama-2-70b-hf",
+    modelConfig: {
+      numParams: 70,
+      numLayers: 80,
+      vocabSize: 32000,
+      hiddenSize: 8192,
+      intermediateSize: 28672,
+      numAttentionHeads: 64,
+      numKeyValueHeads: 8,
+    },
+  },
+  {
+    label: "NousResearch/Llama-2-13b-hf",
+    modelConfig: {
+      numParams: 13.058,
+      numLayers: 40,
+      vocabSize: 32000,
+      hiddenSize: 5120,
+      intermediateSize: 13824,
+      numAttentionHeads: 40,
+      numKeyValueHeads: 40,
+    },
+  },
+  {
     label: "NousResearch/Llama-2-7b-hf",
     modelConfig: {
-      numParams: 6.738,
+      numParams: 6.772,
       hiddenSize: 4096,
       vocabSize: 32000,
       numAttentionHeads: 32,
@@ -31,7 +56,7 @@ export const modelConfigPresets: {
   {
     label: "mistralai/Mistral-7B-v0.1",
     modelConfig: {
-      numParams: 7.242,
+      numParams: 7.51,
       hiddenSize: 4096,
       vocabSize: 32000,
       numAttentionHeads: 32,
@@ -67,7 +92,7 @@ export const modelConfigPresets: {
   {
     label: "gpt2-xl",
     modelConfig: {
-      numParams: 1.558,
+      numParams: 1.608,
       hiddenSize: 1600,
       vocabSize: 50257,
       numAttentionHeads: 25,
@@ -79,7 +104,7 @@ export const modelConfigPresets: {
   {
     label: "gpt2-large",
     modelConfig: {
-      numParams: 0.774,
+      numParams: 0.812,
       hiddenSize: 1280,
       vocabSize: 50257,
       numAttentionHeads: 20,
@@ -91,7 +116,7 @@ export const modelConfigPresets: {
   {
     label: "gpt2-medium",
     modelConfig: {
-      numParams: 0.355,
+      numParams: 0.38,
       hiddenSize: 1024,
       vocabSize: 50257,
       numAttentionHeads: 16,
@@ -103,7 +128,7 @@ export const modelConfigPresets: {
   {
     label: "gpt2",
     modelConfig: {
-      numParams: 0.124,
+      numParams: 0.137,
       hiddenSize: 768,
       vocabSize: 50257,
       numAttentionHeads: 12,
