@@ -5,7 +5,7 @@ import { Optimizer, Precision, Unit } from "@/app/_interfaces"
 import { estimateResult, getTotalUsagePerGPU } from "@/app/_lib"
 import { defaultRunConfig, modelConfigPresets } from "@/app/configurations"
 import { HelpOutline } from "@mui/icons-material"
-import { IconButton, Tooltip } from "@mui/material"
+import { IconButton, Link, Tooltip } from "@mui/material"
 import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Checkbox from "@mui/material/Checkbox"
@@ -38,7 +38,18 @@ export default function App() {
             VRAM Estimator
           </Typography>
           <Typography variant="subtitle1" align="center">
-            Estimate GPU VRAM usage of transformer-based models
+            Estimate GPU VRAM usage of transformer-based models.
+          </Typography>
+          <Typography variant="subtitle1" align="center">
+            Read calculation code in the{" "}
+            <Link
+              href="https://github.com/furiousteabag/vram-calculator/blob/main/app/_lib/index.ts"
+              rel="noreferrer"
+              target="_blank"
+            >
+              source repo
+            </Link>
+            .
           </Typography>
         </Grid>
         <Grid item xs={12} sm={6}>
