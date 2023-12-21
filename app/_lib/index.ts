@@ -93,25 +93,23 @@ function calculateActivations({ modelConfig, runConfig }: { modelConfig: ModelCo
     (isTraining && trainingPrecision === Precision.mixed) || (!isTraining && inferencePrecision !== Precision.full)
       ? 2
       : 4
-  const numKeyValHeads = numKeyValueHeads
-  const intermSize = intermediateSize
   const headDim = hiddenSize / numAttentionHeads
 
   const attentionInput = bytesPerParam * batchSize * sequenceLength * hiddenSize
   const q = bytesPerParam * batchSize * sequenceLength * headDim * numAttentionHeads
-  const k = bytesPerParam * batchSize * sequenceLength * headDim * numKeyValHeads
+  const k = bytesPerParam * batchSize * sequenceLength * headDim * numKeyValueHeads
   const softmaxOutput = bytesPerParam * batchSize * numAttentionHeads * Math.pow(sequenceLength, 2)
   const softmaxDropoutMask = 1 * batchSize * numAttentionHeads * Math.pow(sequenceLength, 2)
   const dropoutOutput = bytesPerParam * batchSize * numAttentionHeads * Math.pow(sequenceLength, 2)
-  const v = bytesPerParam * batchSize * sequenceLength * headDim * numKeyValHeads
+  const v = bytesPerParam * batchSize * sequenceLength * headDim * numKeyValueHeads
   const outProjInput = bytesPerParam * batchSize * sequenceLength * numAttentionHeads * headDim
   const attentionDropout = 1 * batchSize * sequenceLength * hiddenSize
   const attentionBlock =
     attentionInput + q + k + softmaxOutput + v + outProjInput + softmaxDropoutMask + dropoutOutput + attentionDropout
 
   const mlpInput = bytesPerParam * batchSize * sequenceLength * hiddenSize
-  const activationInput = bytesPerParam * batchSize * sequenceLength * intermSize
-  const downProjInput = bytesPerParam * batchSize * sequenceLength * intermSize
+  const activationInput = bytesPerParam * batchSize * sequenceLength * intermediateSize
+  const downProjInput = bytesPerParam * batchSize * sequenceLength * intermediateSize
   const dropoutMask = 1 * batchSize * sequenceLength * hiddenSize
   const mlpBlock = mlpInput + activationInput + downProjInput + dropoutMask
 
