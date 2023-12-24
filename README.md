@@ -21,3 +21,8 @@ npm run build
 ```
 
 It will result with `./out` folder which can be served with any webserver (e.g. nginx).
+
+## ToDo
+
+- Quantized models inference
+- LoRA/QLoRA fine-tuning
