@@ -119,9 +119,9 @@ function calculateActivations({ modelConfig, runConfig }: { modelConfig: ModelCo
 
   let activations = isTraining ? layer * numLayers : layer
 
-  if (isTraining && numGPUs > 1 && isFSDP) {
-    activations /= numGPUs
-  }
+  // if (isTraining && numGPUs > 1 && isFSDP) {
+  //   activations /= numGPUs
+  // }
 
   return activations
 }

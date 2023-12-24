@@ -198,7 +198,7 @@ export default function App() {
                   label="FSDP Full Shard"
                 />
                 <Tooltip
-                  title="Shard model layers, activations, gradients and optimizer states across available GPUs"
+                  title="Shard model layers, gradients and optimizer states across available GPUs"
                   enterTouchDelay={10}
                   leaveTouchDelay={5000}
                 >
@@ -477,7 +477,9 @@ export default function App() {
                         ? `Sum of sizes of all intermediate tensors during forward pass across all ${
                             modelConfig.numLayers
                           } layers${
-                            runConfig.numGPUs > 1 && runConfig.isFSDP ? ` ÷ Number of GPUs (${runConfig.numGPUs})` : ""
+                            runConfig.numGPUs > 1 && runConfig.isFSDP && false
+                              ? ` ÷ Number of GPUs (${runConfig.numGPUs})`
+                              : ""
                           }.`
                         : `Size of a biggest tensor within forward pass. It is estimated as the sum of all intermediate tensors within computation of a single layer.`) +
                       ` Activations size have quadratic dependence on Sequence Length.`
