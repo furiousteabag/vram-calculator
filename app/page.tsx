@@ -563,7 +563,7 @@ export default function App() {
         <Divider sx={{ height: "30px", width: "100%" }} />
 
         <Typography variant="subtitle1" align="center">
-          While my estimates might not be completely precise, they reflect my current understanding of the topic. For an
+          While estimates might not be completely precise, they reflect my current understanding of the topic. For an
           in-depth explanation and the logic behind these numbers, feel free to check out my{" "}
           <Link href="https://asmirnov.xyz/vram" rel="noreferrer" target="_blank">
             detailed post
