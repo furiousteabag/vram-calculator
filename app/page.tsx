@@ -5,7 +5,7 @@ import { Optimizer, Precision, Unit } from "@/app/_interfaces"
 import { estimateResult, getTotalUsagePerGPU } from "@/app/_lib"
 import { defaultRunConfig, modelConfigPresets } from "@/app/configurations"
 import { HelpOutline } from "@mui/icons-material"
-import { IconButton, Link, Tooltip } from "@mui/material"
+import { Divider, IconButton, Link, Tooltip } from "@mui/material"
 import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Checkbox from "@mui/material/Checkbox"
@@ -39,17 +39,6 @@ export default function App() {
           </Typography>
           <Typography variant="subtitle1" align="center">
             Estimate GPU VRAM usage of transformer-based models.
-          </Typography>
-          <Typography variant="subtitle1" align="center">
-            Read calculation code in the{" "}
-            <Link
-              href="https://github.com/furiousteabag/vram-calculator/blob/main/app/_lib/index.ts"
-              rel="noreferrer"
-              target="_blank"
-            >
-              source repo
-            </Link>
-            .
           </Typography>
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -570,6 +559,26 @@ export default function App() {
             </List>
           </Stack>
         </Grid>
+
+        <Divider sx={{ height: "30px", width: "100%" }} />
+
+        <Typography variant="subtitle1" align="center">
+          While my estimates might not be completely precise, they reflect my current understanding of the topic. For an
+          in-depth explanation and the logic behind these numbers, feel free to check out my{" "}
+          <Link href="https://asmirnov.xyz/vram" rel="noreferrer" target="_blank">
+            detailed post
+          </Link>{" "}
+          and the{" "}
+          <Link
+            href="https://github.com/furiousteabag/vram-calculator/blob/main/app/_lib/index.ts"
+            rel="noreferrer"
+            target="_blank"
+          >
+            calculation code
+          </Link>{" "}
+          in the source repo. If you feel something is wrong please reach out via email{" "}
+          <Link href="mailto:alex@asmirnov.xyz">alex@asmirnov.xyz</Link> or create an issue/PR in the repo. Cheers!
+        </Typography>
       </Grid>
     </Container>
   )
