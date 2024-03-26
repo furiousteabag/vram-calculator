@@ -1,0 +1,17 @@
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vram-calculation-dev
+  namespace: vram-calculation
+  labels:
+    app: vram-calculation-dev
+spec:
+  selector:
+    app: vram-calculation-dev
+  type: ClusterIP
+  ports:
+  - name: svc-port-web-dev
+    protocol: TCP
+    port: 80
+    targetPort: port-web-dev

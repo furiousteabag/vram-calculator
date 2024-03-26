@@ -1,0 +1,58 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ratelimit
+  namespace: vram-calculation
+spec:
+  rateLimit:
+    average: 100
+    burst: 50
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ipwhitelist
+  namespace: vram-calculation
+spec:
+  ipWhiteList:
+   sourceRange:
+      - 127.0.0.1/32
+      - 147.161.183.21
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: security
+  namespace: vram-calculation
+spec:
+  headers:
+    frameDeny: true
+    sslRedirect: true
+    browserXssFilter: true
+    contentTypeNosniff: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vram-calculation-dev
+  namespace: vram-calculation
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`vram-calculation.83-206-89-106.nip.io`)
+      kind: Rule
+      services:
+        - name: vram-calculation-dev
+          port: 80
+      middlewares:
+      - name: security
+      - name: ratelimit
+        #     - name: ipwhitelist
+  tls:
+    certResolver: letsencrypt
+

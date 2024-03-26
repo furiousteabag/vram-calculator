@@ -1,0 +1,32 @@
+# Deployment of Smart3
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: vram-calculation
+  name: vram-calculation-dev
+  labels:
+    app: vram-calculation-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vram-calculation-dev
+  template:
+    metadata:
+      labels:
+        app: vram-calculation-dev
+    spec:
+      containers:
+        - name: vram-calculation-dev
+          image: harbor.datasvc01.lysdemolab.fr/jear/vram-calculation:v0.3-dev
+          resources:
+            requests: 
+              cpu: "250m"
+              memory: "64Mi"
+              #            limits:
+              #cpu : "500m"
+              #memory: "128Mi"
+          ports:
+            - name: port-web-dev
+              containerPort: 80    
+          imagePullPolicy: Always  
